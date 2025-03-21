@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Key Pop Animation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                    },
+                    animation: {
+                        'bounce-in': 'bounceIn 0.75s ease-out forwards',
+                        'spin-in': 'spinIn 0.75s ease-out forwards',
+                        'swing': 'swing 0.75s ease-out forwards',
+                        'flip': 'flip 0.75s ease-out forwards',
+                        'zoom-in': 'zoomIn 0.75s ease-out forwards',
+                    },
+                    keyframes: {
+                        bounceIn: {
+                            '0%': { transform: 'scale(0)', opacity: 0 },
+                            '60%': { transform: 'scale(1.2)', opacity: 1 },
+                            '100%': { transform: 'scale(1)', opacity: 1 },
+                        },
+                        spinIn: {
+                            '0%': { transform: 'rotate(-180deg) scale(0)', opacity: 0 },
+                            '100%': { transform: 'rotate(0) scale(1)', opacity: 1 },
+                        },
+                        swing: {
+                            '0%': { transform: 'rotate(0deg) scale(0)', opacity: 0 },
+                            '20%': { transform: 'rotate(15deg) scale(1)', opacity: 1 },
+                            '40%': { transform: 'rotate(-10deg) scale(1)' },
+                            '60%': { transform: 'rotate(5deg)' },
+                            '80%': { transform: 'rotate(-3deg)' },
+                            '100%': { transform: 'rotate(0deg)' },
+                        },
+                        flip: {
+                            '0%': { transform: 'perspective(400px) rotateY(90deg)', opacity: 0 },
+                            '40%': { transform: 'perspective(400px) rotateY(-10deg)', opacity: 1 },
+                            '70%': { transform: 'perspective(400px) rotateY(10deg)' },
+                            '100%': { transform: 'perspective(400px) rotateY(0deg)' },
+                        },
+                        zoomIn: {
+                            '0%': { transform: 'scale(0)', opacity: 0 },
+                            '100%': { transform: 'scale(1)', opacity: 1 },
+                        },
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        .key-element {
+            position: absolute;
+            font-weight: bold;
+            text-align: center;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            user-select: none;
+        }
+        .dark .key-element {
+            box-shadow: 0 4px 6px rgba(255, 255, 255, 0.1);
+        }
+        .fade-out {
+            animation: fadeOut 0.5s forwards;
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-100 dark:bg-gray-900 transition-colors duration-300">
+    <div class="container mx-auto px-4 py-8">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-800 dark:text-white mb-4">Key Pop Animation</h1>
+            <p class="text-lg text-gray-600 dark:text-gray-300">Press any key to see it pop up on the screen with funny animations and sounds!</p>
+        </div>
+        
+        <div id="playground" class="relative w-full h-[70vh] bg-white dark:bg-gray-800 rounded-lg shadow-lg overflow-hidden">
+            <!-- Keys will appear here -->
+            <div class="absolute inset-0 flex items-center justify-center">
+                <p class="text-gray-400 dark:text-gray-500 text-xl">Press any key to start the fun!</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check for dark mode preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const playground = document.getElementById('playground');
+            const MAX_ELEMENTS = 30; // Maximum number of elements to prevent performance issues
+            let elements = [];
+
+            // Array of sound URLs - simple notes that work well together
+            const sounds = [
+                'data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAABI9DQeUEQAiRSFhjBAAASEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksBKQAaYRsZmZaAItoA4DcwkARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==', // C4
+                'data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAABIZDQeUEQAiQyHhjBAAASEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksBJgAacRsXmZaAIrQAYDMwgARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==', // D4
+                'data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAABIhDQeUEQAiQSFhjBAAASEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksBJQAaURsZmZaAIrQAYDMwgARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==', // E4
+                'data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAABIpCweUEQAiQSEhjBAAASEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksBJgAaARsZmZaAIuQjo3cekARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==', // F4
+                'data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAABHdCweUMQAiOyDhjBMAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksBJYAcMQ8JmZqAIoIh4PMMMABVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==', // G4
+                'data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAABIlCweUEQAiQSEhjBAAASEVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksBJAAaARsZmZaAIvgiYzMy0AVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==', // A4
+                'data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMA//uSwAAABHdDQeUMQAiQyFhjBAAAVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVf/7ksBJAAcMQ0HmGMAIogiYPMMAARVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVQ==', // B4
+            ];
+
+            // Array of animations
+            const animations = [
+                'animate-bounce-in',
+                'animate-spin-in',
+                'animate-swing',
+                'animate-flip',
+                'animate-zoom-in'
+            ];
+
+            // Array of colors in hex format
+            const colors = [
+                '#FF5733', // Red-Orange
+                '#33FF57', // Green
+                '#3357FF', // Blue
+                '#FF33F5', // Pink
+                '#33FFF5', // Cyan
+                '#FFF533', // Yellow
+                '#FF3333', // Red
+                '#33FF33', // Lime
+                '#3333FF', // Deep Blue
+                '#F533FF', // Magenta
+                '#FF9933', // Orange
+                '#33FFCC', // Turquoise
+                '#CC33FF', // Purple
+                '#FFFF33', // Bright Yellow
+                '#33CCFF'  // Light Blue
+            ];
+
+            // Event listener for keyboard
+            document.addEventListener('keydown', function(event) {
+                // Create a new Audio element with a random sound
+                const sound = new Audio(sounds[Math.floor(Math.random() * sounds.length)]);
+                
+                // Play the sound
+                sound.volume = 1; // Set volume to 50%
+                sound.play().catch(e => console.log('Audio play error:', e));
+                
+                // Get key value (for displaying)
+                let key = event.key;
+                
+                // Handle special keys
+                if (key === ' ') key = 'Space';
+                else if (key === 'Enter') key = '↵';
+                else if (key === 'Backspace') key = '⌫';
+                else if (key === 'Escape') key = 'Esc';
+                else if (key === 'ArrowUp') key = '↑';
+                else if (key === 'ArrowDown') key = '↓';
+                else if (key === 'ArrowLeft') key = '←';
+                else if (key === 'ArrowRight') key = '→';
+                else if (key === 'Tab') key = '⇥';
+                else if (key === 'Shift') key = '⇧';
+                else if (key === 'Control') key = 'Ctrl';
+                else if (key === 'Alt') key = 'Alt';
+                
+                // Create a new key element
+                createKeyElement(key);
+            });
+
+            function createKeyElement(key) {
+                // Remove instruction text after first key press
+                const instructionText = document.querySelector('#playground p');
+                if (instructionText) {
+                    instructionText.remove();
+                }
+
+                // Random position within the playground
+                const maxX = playground.clientWidth - 100;
+                const maxY = playground.clientHeight - 100;
+                const posX = Math.floor(Math.random() * maxX);
+                const posY = Math.floor(Math.random() * maxY);
+                
+                // Random size (between 40px and 120px)
+                const size = Math.floor(Math.random() * 80) + 40;
+                
+                // Random animation and color
+                const animation = animations[Math.floor(Math.random() * animations.length)];
+                const color = colors[Math.floor(Math.random() * colors.length)];
+                const textColor = isDarkColor(color) ? 'white' : 'black';
+                
+                // Create element
+                const element = document.createElement('div');
+                element.className = `key-element ${animation}`;
+                element.style.left = posX + 'px';
+                element.style.top = posY + 'px';
+                element.style.width = size + 'px';
+                element.style.height = size + 'px';
+                element.style.backgroundColor = color;
+                element.style.color = textColor;
+                element.style.fontSize = Math.max(16, size / 2) + 'px';
+                element.textContent = key;
+                
+                // Add to playground
+                playground.appendChild(element);
+                
+                // Add to elements array
+                elements.push(element);
+                
+                // Remove element after animation completes
+                setTimeout(() => {
+                    element.classList.add('fade-out');
+                    setTimeout(() => {
+                        if (element.parentNode === playground) {
+                            playground.removeChild(element);
+                            
+                            // Remove from elements array
+                            const index = elements.indexOf(element);
+                            if (index > -1) {
+                                elements.splice(index, 1);
+                            }
+                        }
+                    }, 500); // Wait for fade-out animation
+                }, 2000);
+                
+                // If we have too many elements, remove the oldest ones
+                if (elements.length > MAX_ELEMENTS) {
+                    const oldestElement = elements.shift();
+                    if (oldestElement.parentNode === playground) {
+                        playground.removeChild(oldestElement);
+                    }
+                }
+            }
+
+            // Helper function to determine if a color is dark
+            function isDarkColor(hexColor) {
+                // Convert hex to RGB
+                const r = parseInt(hexColor.substr(1, 2), 16);
+                const g = parseInt(hexColor.substr(3, 2), 16);
+                const b = parseInt(hexColor.substr(5, 2), 16);
+                
+                // Calculate brightness
+                const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+                
+                // Return true if color is dark
+                return brightness < 128;
+            }
+        });
+    </script>
+</body>
+</html>

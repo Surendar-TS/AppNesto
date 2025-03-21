@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Typewriting Test</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-gray-100 flex items-center justify-center">
+  <div class="w-full max-w-2xl p-6 bg-white shadow-md rounded-lg">
+    <h1 class="text-3xl font-bold mb-4 text-center">Typewriting Test</h1>
+    <div class="flex justify-between mb-4">
+      <span id="level-display" class="text-lg font-medium">Level: 1</span>
+      <span id="points-display" class="text-lg font-medium">Points: 0</span>
+      <span id="timer-display" class="text-lg font-medium">Time: 60s</span>
+    </div>
+    <div id="target-phrase" class="mb-4 text-2xl text-center text-gray-700">
+      Press "Start Game" to begin!
+    </div>
+    <input id="input-field" type="text" class="w-full p-3 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-400" placeholder="Start typing here..." disabled />
+    <button id="start-button" class="mt-4 w-full bg-blue-500 text-white p-3 rounded hover:bg-blue-600 transition" onclick="startGame()">Start Game</button>
+  </div>
+
+  <script>
+    // Array of sample words
+    const words = ["apple", "banana", "orange", "grape", "cherry", "melon", "kiwi", "pineapple", "mango", "strawberry", "blueberry", "watermelon", "peach", "plum", "pear", "lemon", "lime", "apricot", "coconut", "fig"];
+
+    // Global game variables
+    let level = 1;
+    let points = 0;
+    let timeLeft = 60;
+    let timerInterval;
+    let targetPhrase = "";
+    
+    // DOM Elements
+    const levelDisplay = document.getElementById('level-display');
+    const pointsDisplay = document.getElementById('points-display');
+    const timerDisplay = document.getElementById('timer-display');
+    const targetDisplay = document.getElementById('target-phrase');
+    const inputField = document.getElementById('input-field');
+    const startButton = document.getElementById('start-button');
+
+    // Generate a random phrase; number of words increases with level
+    function generatePhrase(level) {
+      const wordCount = level + 2; // Level 1 => 3 words, Level 2 => 4 words, etc.
+      let phraseWords = [];
+      for (let i = 0; i < wordCount; i++) {
+        const randomIndex = Math.floor(Math.random() * words.length);
+        phraseWords.push(words[randomIndex]);
+      }
+      return phraseWords.join(' ');
+    }
+
+    // Start or restart the game
+    function startGame() {
+      level = 1;
+      points = 0;
+      timeLeft = 60;
+      inputField.disabled = false;
+      inputField.value = "";
+      startButton.disabled = true;
+      updateDisplays();
+      targetPhrase = generatePhrase(level);
+      updateTargetDisplay();
+      inputField.focus();
+
+      if (timerInterval) clearInterval(timerInterval);
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        timerDisplay.textContent = `Time: ${timeLeft}s`;
+        if (timeLeft <= 0) {
+          endGame();
+        }
+      }, 1000);
+    }
+
+    // End the game and show final score
+    function endGame() {
+      clearInterval(timerInterval);
+      inputField.disabled = true;
+      startButton.disabled = false;
+      targetDisplay.textContent = `Game Over! Final Points: ${points}. Press "Start Game" to play again.`;
+    }
+
+    // Update level, points, and timer displays
+    function updateDisplays() {
+      levelDisplay.textContent = `Level: ${level}`;
+      pointsDisplay.textContent = `Points: ${points}`;
+      timerDisplay.textContent = `Time: ${timeLeft}s`;
+    }
+
+    // Show the target phrase with real-time evaluation markup
+    function updateTargetDisplay() {
+      // Initially, the whole phrase is in gray
+      targetDisplay.innerHTML = `<span class="text-green-500" id="correct-part"></span><span class="text-gray-500" id="remaining-part">${targetPhrase}</span>`;
+    }
+
+    // Real-time evaluation: highlight correct letters in green
+    function updateEvaluation() {
+      const typed = inputField.value;
+      let correctPart = "";
+      for (let i = 0; i < typed.length; i++) {
+        if (typed[i] === targetPhrase[i]) {
+          correctPart += targetPhrase[i];
+        } else {
+          break;
+        }
+      }
+      const remainingPart = targetPhrase.substring(correctPart.length);
+      document.getElementById('correct-part').textContent = correctPart;
+      document.getElementById('remaining-part').textContent = remainingPart;
+
+      // Visual feedback on the input field border
+      if (targetPhrase.startsWith(typed)) {
+        inputField.classList.remove('border-red-500');
+        inputField.classList.add('border-green-500');
+      } else {
+        inputField.classList.remove('border-green-500');
+        inputField.classList.add('border-red-500');
+      }
+
+      // When the phrase is fully typed correctly, level up
+      if (typed === targetPhrase) {
+        // Award points (e.g., level multiplied by phrase length)
+        points += level * targetPhrase.length;
+        level++;
+        updateDisplays();
+        targetPhrase = generatePhrase(level);
+        updateTargetDisplay();
+        inputField.value = "";
+        inputField.classList.remove('border-green-500', 'border-red-500');
+      }
+    }
+
+    // Listen for input events for real-time evaluation
+    inputField.addEventListener('input', updateEvaluation);
+  </script>
+</body>
+</html>

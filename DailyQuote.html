@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sliding Puzzle Quotes</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+        }
+        #puzzle {
+            display: grid;
+            grid-template-columns: repeat(3, 100px);
+            grid-template-rows: repeat(3, 100px);
+            gap: 5px;
+            position: relative;
+        }
+        .tile {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100px;
+            height: 100px;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            font-size: 18px;
+            transition: background-color 0.3s, transform 0.3s;
+        }
+        .tile.correct {
+            background-color: green;
+        }
+        .empty {
+            background-color: transparent;
+            cursor: default;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>Sliding Puzzle Quotes</h1>
+    <div id="puzzle"></div>
+    <div id="status"></div>
+    <button id="reset">Reset Puzzle</button>
+
+    <script>
+        const quotes = [
+            "Life is what happens when you’re busy making",
+            "The purpose of our lives is to be happy",
+            "Get busy living or get busy dying",
+            "You have within you right now everything you need to deal with whatever the world can throw at you",
+            "Believe you can and you’re halfway there",
+            "The only impossible journey is the one you never begin",
+            "Act as if what you do makes a difference. It does",
+            "Success is not how high you have climbed, but how you make a positive difference to the world"
+        ];
+
+        let currentQuote = '';
+        let grid = [];
+        let emptyIndex = 8; // last index in a 3x3 grid
+        let startTime, endTime;
+
+        function getTodayQuote() {
+            const today = new Date();
+            const index = today.getDate() % quotes.length;
+            return quotes[index];
+        }
+
+        function initializePuzzle() {
+            currentQuote = getTodayQuote();
+            const words = currentQuote.split(" ").slice(0, 8); // Take only 8 words
+            grid = [...words, ""];
+            shuffleGrid();
+            renderPuzzle();
+            startTime = new Date();
+        }
+
+        function shuffleGrid() {
+            for (let i = grid.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [grid[i], grid[j]] = [grid[j], grid[i]];
+            }
+        }
+
+        function renderPuzzle() {
+            const puzzleElement = document.getElementById('puzzle');
+            puzzleElement.innerHTML = '';
+            grid.forEach((word, index) => {
+                const tile = document.createElement('div');
+                tile.className = `tile ${word === '' ? 'empty' : ''}`;
+                tile.textContent = word;
+                tile.onclick = () => moveTile(index);
+                puzzleElement.appendChild(tile);
+            });
+            updateStatus();
+        }
+
+        function moveTile(index) {
+            if (index === emptyIndex) return;
+
+            const validMoves = [emptyIndex - 1, emptyIndex + 1, emptyIndex - 3, emptyIndex + 3];
+            if (validMoves.includes(index)) {
+                requestAnimationFrame(() => animateMove(index));
+            }
+        }
+
+        function animateMove(index) {
+            const tiles = document.querySelectorAll('.tile');
+            const emptyTile = tiles[emptyIndex];
+            const movingTile = tiles[index];
+
+            // Animate the move
+            movingTile.style.transition = 'transform 0.3s';
+            const emptyRect = emptyTile.getBoundingClientRect();
+            const movingRect = movingTile.getBoundingClientRect();
+
+            const deltaX = emptyRect.left - movingRect.left;
+            const deltaY = emptyRect.top - movingRect.top;
+
+            movingTile.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
+
+            setTimeout(() => {
+                [grid[emptyIndex], grid[index]] = [grid[index], grid[emptyIndex]];
+                emptyIndex = index;
+                movingTile.style.transform = '';
+                checkCorrectness();
+                renderPuzzle();
+            }, 300);
+        }
+
+        function checkCorrectness() {
+            grid.forEach((word, index) => {
+                const tile = document.querySelectorAll('.tile')[index];
+                if (word === currentQuote.split(" ")[index]) {
+                    tile.classList.add('correct');
+                } else {
+                    tile.classList.remove('correct');
+                }
+            });
+            if (grid.join(" ") === currentQuote.split(" ").join(" ") + " ") {
+                endTime = new Date();
+                const timeTaken = (endTime - startTime) / 1000;
+                alert(`Puzzle solved in ${timeTaken} seconds!`);
+            }
+        }
+
+        function updateStatus() {
+            document.getElementById('status').textContent = `Current Quote: "${currentQuote}"`;
+        }
+
+        document.getElementById('reset').onclick = initializePuzzle;
+
+        // Initialize puzzle on load
+        window.onload = initializePuzzle;
+    </script>
+
+</body>
+</html>

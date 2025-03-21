@@ -1,0 +1,690 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Subtitle Generator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 
+    <script src="https://unpkg.com/@xenova/transformers@2.6.1"></script>
+    -->    
+    <script type="module">
+        // Add this import at the top
+        import { pipeline } from 'https://unpkg.com/@xenova/transformers@2.6.1';
+    </script>    
+    <style>
+        .subtitle-container {
+            position: absolute;
+            bottom: 50px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            z-index: 10;
+        }
+        .subtitle-text {
+            display: inline-block;
+            padding: 4px 8px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            border-radius: 4px;
+            max-width: 80%;
+            margin: 0 auto;
+        }
+        /* Dark mode support */
+        @media (prefers-color-scheme: dark) {
+            .dark-mode-text {
+                color: white;
+            }
+            .dark-mode-bg {
+                background-color: #181818;
+            }
+            .dark-mode-border {
+                border-color: #333;
+            }
+            .dark-mode-button {
+                background-color: #333;
+            }
+        }
+    </style>
+</head>
+<body class="min-h-screen p-4 transition-colors dark:bg-[#181818] dark:text-white">
+    <div class="max-w-4xl mx-auto">
+        <h1 class="text-2xl font-bold mb-4 text-center text-[#5D5CDE] dark:text-[#8080FF]">Video Subtitle Generator</h1>
+        
+        <div class="mb-6 p-4 border-2 border-dashed border-gray-300 dark:border-gray-700 rounded-lg text-center">
+            <input type="file" id="videoInput" accept="video/*" class="hidden" />
+            <label for="videoInput" class="block w-full py-6 cursor-pointer">
+                <div class="flex flex-col items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-[#5D5CDE] dark:text-[#8080FF] mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                    </svg>
+                    <span class="text-lg font-medium mb-1">Click to upload a video</span>
+                    <span class="text-sm text-gray-500 dark:text-gray-400">MP4, WebM, and other browser-supported formats</span>
+                </div>
+            </label>
+        </div>
+
+        <div id="videoContainer" class="mb-6 hidden">
+            <div class="relative">
+                <video id="videoPlayer" class="w-full rounded-lg" controls>
+                    Your browser does not support the video tag.
+                </video>
+                <div id="subtitleContainer" class="subtitle-container">
+                    <span id="subtitleText" class="subtitle-text"></span>
+                </div>
+            </div>
+
+            <div class="mt-4 flex flex-col gap-2">
+                <button id="generateBtn" class="w-full py-2 px-4 bg-[#5D5CDE] hover:bg-[#4a49b8] text-white font-semibold rounded-lg shadow-md transition-colors duration-300 dark:bg-[#6A6AEB] dark:hover:bg-[#5858D9]">
+                    Generate Subtitles
+                </button>
+                <div id="progressContainer" class="hidden flex flex-col gap-2">
+                    <div class="flex justify-between items-center">
+                        <span id="progressStatus">Initializing...</span>
+                        <span id="progressPercent">0%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
+                        <div id="progressBar" class="bg-[#5D5CDE] h-2.5 rounded-full dark:bg-[#8080FF]" style="width: 0%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="subtitlesSection" class="hidden">
+            <div class="mb-4">
+                <h2 class="text-xl font-semibold mb-2">Generated Subtitles</h2>
+                <div class="flex items-center gap-2 mb-2">
+                    <button id="downloadSrtBtn" class="py-2 px-4 bg-[#5D5CDE] hover:bg-[#4a49b8] text-white font-semibold rounded-lg shadow-md transition-colors duration-300 dark:bg-[#6A6AEB] dark:hover:bg-[#5858D9]">
+                        Download .SRT
+                    </button>
+                    <button id="downloadVttBtn" class="py-2 px-4 bg-[#5D5CDE] hover:bg-[#4a49b8] text-white font-semibold rounded-lg shadow-md transition-colors duration-300 dark:bg-[#6A6AEB] dark:hover:bg-[#5858D9]">
+                        Download .VTT
+                    </button>
+                    <button id="toggleSubtitlesBtn" class="py-2 px-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md transition-colors duration-300 dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600">
+                        Toggle Subtitles
+                    </button>
+                </div>
+                
+                <div class="flex flex-wrap gap-2 mb-4">
+                    <div>
+                        <label for="fontSizeSlider" class="block text-sm font-medium">Font Size</label>
+                        <input type="range" id="fontSizeSlider" min="12" max="36" value="16" class="w-full">
+                    </div>
+                    <div>
+                        <label for="bgOpacitySlider" class="block text-sm font-medium">Background Opacity</label>
+                        <input type="range" id="bgOpacitySlider" min="0" max="1" step="0.1" value="0.7" class="w-full">
+                    </div>
+                    <div class="w-full sm:w-auto">
+                        <label for="subtitleColor" class="block text-sm font-medium">Text Color</label>
+                        <input type="color" id="subtitleColor" value="#ffffff" class="w-full h-8">
+                    </div>
+                    <div class="w-full sm:w-auto">
+                        <label for="subtitleBgColor" class="block text-sm font-medium">Background</label>
+                        <input type="color" id="subtitleBgColor" value="#000000" class="w-full h-8">
+                    </div>
+                </div>
+            </div>
+
+            <div class="mb-4">
+                <h3 class="text-lg font-semibold mb-2">Edit Subtitles</h3>
+                <div class="border rounded-lg overflow-hidden dark:border-gray-700">
+                    <div class="max-h-64 overflow-y-auto bg-white dark:bg-gray-800">
+                        <div id="subtitlesList" class="divide-y divide-gray-200 dark:divide-gray-700"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="finalSection" class="hidden">
+            <h3 class="text-lg font-semibold mb-2">Export with Embedded Subtitles</h3>
+            <p class="text-gray-700 dark:text-gray-300 mb-2">Note: To save the video with subtitles permanently embedded, right-click the video and select "Save video as"</p>
+            <button id="embedSubtitlesBtn" class="mb-4 py-2 px-4 bg-[#5D5CDE] hover:bg-[#4a49b8] text-white font-semibold rounded-lg shadow-md transition-colors duration-300 dark:bg-[#6A6AEB] dark:hover:bg-[#5858D9]">
+                Embed Subtitles in Video
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // Handle dark mode
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Global variables
+        let videoBlob;
+        let videoObjectURL;
+        let subtitles = [];
+        let subtitlesVisible = true;
+        let currentSubtitleIndex = -1;
+
+        // DOM Elements
+        const videoInput = document.getElementById('videoInput');
+        const videoContainer = document.getElementById('videoContainer');
+        const videoPlayer = document.getElementById('videoPlayer');
+        const generateBtn = document.getElementById('generateBtn');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressStatus = document.getElementById('progressStatus');
+        const progressPercent = document.getElementById('progressPercent');
+        const progressBar = document.getElementById('progressBar');
+        const subtitlesSection = document.getElementById('subtitlesSection');
+        const subtitlesList = document.getElementById('subtitlesList');
+        const subtitleContainer = document.getElementById('subtitleContainer');
+        const subtitleText = document.getElementById('subtitleText');
+        const toggleSubtitlesBtn = document.getElementById('toggleSubtitlesBtn');
+        const downloadSrtBtn = document.getElementById('downloadSrtBtn');
+        const downloadVttBtn = document.getElementById('downloadVttBtn');
+        const fontSizeSlider = document.getElementById('fontSizeSlider');
+        const bgOpacitySlider = document.getElementById('bgOpacitySlider');
+        const subtitleColor = document.getElementById('subtitleColor');
+        const subtitleBgColor = document.getElementById('subtitleBgColor');
+        const finalSection = document.getElementById('finalSection');
+        const embedSubtitlesBtn = document.getElementById('embedSubtitlesBtn');
+
+        // Initialize Transformers pipeline
+        let pipeline;
+        async function initTransformers() {
+            try {
+                //const { pipeline: transformersPipeline } = await import('@xenova/transformers');
+                //return await transformersPipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+                //return await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+                if (!whisperPipeline) {
+                    whisperPipeline = await pipeline('automatic-speech-recognition', 'Xenova/whisper-tiny.en');
+                }
+                return whisperPipeline;
+            } catch (error) {
+                console.error('Error initializing transformers:', error);
+                return null;
+            }
+        }
+
+        // Handle file upload
+        videoInput.addEventListener('change', function(e) {
+            if (e.target.files.length === 0) return;
+
+            const file = e.target.files[0];
+            videoBlob = file;
+            videoObjectURL = URL.createObjectURL(file);
+            videoPlayer.src = videoObjectURL;
+            videoContainer.classList.remove('hidden');
+            
+            // Reset state
+            subtitles = [];
+            currentSubtitleIndex = -1;
+            subtitleText.textContent = '';
+            subtitlesSection.classList.add('hidden');
+            finalSection.classList.add('hidden');
+            progressContainer.classList.add('hidden');
+            subtitlesList.innerHTML = '';
+        });
+
+        // Generate subtitles
+        generateBtn.addEventListener('click', async function() {
+            if (!videoBlob) return;
+
+            subtitles = [];
+            progressContainer.classList.remove('hidden');
+            generateBtn.disabled = true;
+            
+            try {
+                // Initialize transformers if not already done
+                if (!pipeline) {
+                    updateProgress('Loading speech recognition model...', 5);
+                    pipeline = await initTransformers();
+                    if (!pipeline) {
+                        throw new Error('Failed to initialize speech recognition model');
+                    }
+                }
+
+                updateProgress('Extracting audio from video...', 10);
+                
+                // Create an HTML audio element from the video to get the audio
+                const videoEl = document.createElement('video');
+                videoEl.src = videoObjectURL;
+                
+                // Wait for video metadata to load
+                await new Promise(resolve => {
+                    videoEl.addEventListener('loadedmetadata', resolve);
+                    videoEl.load();
+                });
+                
+                // Create an offline audio context
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const duration = videoEl.duration;
+                
+                // Process in chunks of 30 seconds to avoid memory issues
+                const chunkSize = 30;
+                const numChunks = Math.ceil(duration / chunkSize);
+                
+                for (let i = 0; i < numChunks; i++) {
+                    const startTime = i * chunkSize;
+                    const endTime = Math.min((i + 1) * chunkSize, duration);
+                    const chunkDuration = endTime - startTime;
+                    
+                    updateProgress(`Processing audio chunk ${i+1}/${numChunks}...`, 10 + Math.floor((i / numChunks) * 80));
+                    
+                    // Create media element source
+                    videoEl.currentTime = startTime;
+                    await new Promise(resolve => setTimeout(resolve, 100)); // Give time for seeking
+                    
+                    // Create audio processor
+                    const processor = audioContext.createScriptProcessor(4096, 1, 1);
+                    const mediaSource = audioContext.createMediaElementSource(videoEl);
+                    
+                    // Connect audio graph for capturing
+                    mediaSource.connect(processor);
+                    processor.connect(audioContext.destination);
+                    
+                    // Prepare for audio capture
+                    const audioChunks = [];
+                    
+                    processor.onaudioprocess = function(e) {
+                        const inputData = e.inputBuffer.getChannelData(0);
+                        audioChunks.push(new Float32Array(inputData));
+                    };
+                    
+                    // Play video to capture audio
+                    videoEl.play();
+                    
+                    // Capture for the chunk duration
+                    await new Promise(resolve => setTimeout(resolve, chunkDuration * 1000));
+                    
+                    videoEl.pause();
+                    processor.disconnect();
+                    mediaSource.disconnect();
+                    
+                    // Combine audio chunks into a single array
+                    const totalLength = audioChunks.reduce((acc, chunk) => acc + chunk.length, 0);
+                    const combinedAudio = new Float32Array(totalLength);
+                    let offset = 0;
+                    
+                    for (const chunk of audioChunks) {
+                        combinedAudio.set(chunk, offset);
+                        offset += chunk.length;
+                    }
+                    
+                    // Convert to 16-bit PCM for the model
+                    const audioData = {
+                        array: combinedAudio,
+                        sampling_rate: audioContext.sampleRate
+                    };
+                    
+                    // Use transformers.js to transcribe this chunk
+                    updateProgress(`Transcribing chunk ${i+1}/${numChunks}...`, 10 + Math.floor(((i + 0.5) / numChunks) * 80));
+                    //const result = await pipeline(audioData, {
+                    const result = await whisperPipeline(audioData, {
+                        chunk_length_s: 30,
+                        stride_length_s: 5,
+                        return_timestamps: true
+                    });
+                    
+                    // Add chunks to subtitles array with correct time offset
+                    if (result.chunks) {
+                        for (const chunk of result.chunks) {
+                            if (chunk.timestamp) {
+                                subtitles.push({
+                                    start: startTime + chunk.timestamp[0],
+                                    end: startTime + chunk.timestamp[1],
+                                    text: chunk.text.trim()
+                                });
+                            }
+                        }
+                    }
+                }
+                
+                // Sort subtitles by start time
+                subtitles.sort((a, b) => a.start - b.start);
+                
+                // Render subtitles UI
+                renderSubtitlesList();
+                subtitlesSection.classList.remove('hidden');
+                finalSection.classList.remove('hidden');
+                updateProgress('Subtitles generated successfully!', 100);
+                
+                // Start tracking current subtitle
+                videoPlayer.addEventListener('timeupdate', updateCurrentSubtitle);
+            } catch (error) {
+                console.error('Error generating subtitles:', error);
+                updateProgress(`Error: ${error.message}`, 0);
+            } finally {
+                generateBtn.disabled = false;
+            }
+        });
+
+        // Update progress indicator
+        function updateProgress(status, percent) {
+            progressStatus.textContent = status;
+            progressPercent.textContent = `${percent}%`;
+            progressBar.style.width = `${percent}%`;
+        }
+
+        // Render subtitles list
+        function renderSubtitlesList() {
+            subtitlesList.innerHTML = '';
+            
+            subtitles.forEach((subtitle, index) => {
+                const item = document.createElement('div');
+                item.className = 'p-3 hover:bg-gray-100 dark:hover:bg-gray-700';
+                
+                const timeDisplay = document.createElement('div');
+                timeDisplay.className = 'text-sm text-gray-500 dark:text-gray-400 mb-1';
+                timeDisplay.textContent = `${formatTime(subtitle.start)} → ${formatTime(subtitle.end)}`;
+                
+                const textInput = document.createElement('textarea');
+                textInput.className = 'w-full p-2 border rounded text-base dark:bg-gray-800 dark:border-gray-600 dark:text-white';
+                textInput.value = subtitle.text;
+                textInput.rows = 2;
+                textInput.addEventListener('change', (e) => {
+                    subtitles[index].text = e.target.value;
+                });
+                
+                item.appendChild(timeDisplay);
+                item.appendChild(textInput);
+                
+                // Add time adjustment controls
+                const timeControls = document.createElement('div');
+                timeControls.className = 'flex gap-2 mt-2';
+                
+                const startDecBtn = createButton('-0.5s', () => {
+                    subtitles[index].start = Math.max(0, subtitles[index].start - 0.5);
+                    renderSubtitlesList();
+                });
+                
+                const startIncBtn = createButton('+0.5s', () => {
+                    subtitles[index].start = Math.min(subtitles[index].end - 0.1, subtitles[index].start + 0.5);
+                    renderSubtitlesList();
+                });
+                
+                const endDecBtn = createButton('-0.5s', () => {
+                    subtitles[index].end = Math.max(subtitles[index].start + 0.1, subtitles[index].end - 0.5);
+                    renderSubtitlesList();
+                });
+                
+                const endIncBtn = createButton('+0.5s', () => {
+                    subtitles[index].end = Math.min(videoPlayer.duration, subtitles[index].end + 0.5);
+                    renderSubtitlesList();
+                });
+                
+                const jumpBtn = createButton('Jump', () => {
+                    videoPlayer.currentTime = subtitles[index].start;
+                    videoPlayer.play();
+                }, 'bg-[#5D5CDE] hover:bg-[#4a49b8] text-white dark:bg-[#6A6AEB] dark:hover:bg-[#5858D9]');
+                
+                const startLabel = document.createElement('span');
+                startLabel.className = 'text-sm mr-1';
+                startLabel.textContent = 'Start:';
+                
+                const endLabel = document.createElement('span');
+                endLabel.className = 'text-sm mr-1 ml-2';
+                endLabel.textContent = 'End:';
+                
+                timeControls.appendChild(jumpBtn);
+                timeControls.appendChild(startLabel);
+                timeControls.appendChild(startDecBtn);
+                timeControls.appendChild(startIncBtn);
+                timeControls.appendChild(endLabel);
+                timeControls.appendChild(endDecBtn);
+                timeControls.appendChild(endIncBtn);
+                
+                item.appendChild(timeControls);
+                subtitlesList.appendChild(item);
+            });
+        }
+
+        // Create button helper
+        function createButton(text, onClick, additionalClasses = '') {
+            const button = document.createElement('button');
+            button.textContent = text;
+            button.className = `px-2 py-1 text-xs rounded bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 ${additionalClasses}`;
+            button.addEventListener('click', onClick);
+            return button;
+        }
+
+        // Format time as mm:ss.ms
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = Math.floor(seconds % 60);
+            const ms = Math.floor((seconds % 1) * 1000);
+            return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+        }
+
+        // Update current subtitle
+        function updateCurrentSubtitle() {
+            if (!subtitlesVisible || subtitles.length === 0) {
+                subtitleText.textContent = '';
+                return;
+            }
+            
+            const currentTime = videoPlayer.currentTime;
+            let found = false;
+            
+            for (let i = 0; i < subtitles.length; i++) {
+                if (currentTime >= subtitles[i].start && currentTime <= subtitles[i].end) {
+                    subtitleText.textContent = subtitles[i].text;
+                    currentSubtitleIndex = i;
+                    found = true;
+                    break;
+                }
+            }
+            
+            if (!found) {
+                subtitleText.textContent = '';
+                currentSubtitleIndex = -1;
+            }
+        }
+
+        // Toggle subtitles visibility
+        toggleSubtitlesBtn.addEventListener('click', function() {
+            subtitlesVisible = !subtitlesVisible;
+            subtitleContainer.style.display = subtitlesVisible ? 'block' : 'none';
+            toggleSubtitlesBtn.textContent = subtitlesVisible ? 'Hide Subtitles' : 'Show Subtitles';
+        });
+
+        // Font size control
+        fontSizeSlider.addEventListener('input', function() {
+            subtitleText.style.fontSize = `${this.value}px`;
+        });
+
+        // Background opacity control
+        bgOpacitySlider.addEventListener('input', function() {
+            const opacity = parseFloat(this.value);
+            const bgColor = subtitleBgColor.value;
+            const r = parseInt(bgColor.slice(1, 3), 16);
+            const g = parseInt(bgColor.slice(3, 5), 16);
+            const b = parseInt(bgColor.slice(5, 7), 16);
+            subtitleText.style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        });
+
+        // Text color control
+        subtitleColor.addEventListener('input', function() {
+            subtitleText.style.color = this.value;
+        });
+
+        // Background color control
+        subtitleBgColor.addEventListener('input', function() {
+            const opacity = parseFloat(bgOpacitySlider.value);
+            const bgColor = this.value;
+            const r = parseInt(bgColor.slice(1, 3), 16);
+            const g = parseInt(bgColor.slice(3, 5), 16);
+            const b = parseInt(bgColor.slice(5, 7), 16);
+            subtitleText.style.backgroundColor = `rgba(${r}, ${g}, ${b}, ${opacity})`;
+        });
+
+        // Download SRT button
+        downloadSrtBtn.addEventListener('click', function() {
+            if (subtitles.length === 0) return;
+            
+            let srtContent = '';
+            subtitles.forEach((subtitle, index) => {
+                srtContent += `${index + 1}\n`;
+                srtContent += `${formatSrtTime(subtitle.start)} --> ${formatSrtTime(subtitle.end)}\n`;
+                srtContent += `${subtitle.text}\n\n`;
+            });
+            
+            // Create download link
+            const blob = new Blob([srtContent], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            displayDownloadInstructions(url, 'subtitle.srt');
+        });
+
+        // Download VTT button
+        downloadVttBtn.addEventListener('click', function() {
+            if (subtitles.length === 0) return;
+            
+            let vttContent = 'WEBVTT\n\n';
+            subtitles.forEach((subtitle, index) => {
+                vttContent += `${formatVttTime(subtitle.start)} --> ${formatVttTime(subtitle.end)}\n`;
+                vttContent += `${subtitle.text}\n\n`;
+            });
+            
+            // Create download link
+            const blob = new Blob([vttContent], { type: 'text/vtt' });
+            const url = URL.createObjectURL(blob);
+            displayDownloadInstructions(url, 'subtitle.vtt');
+        });
+
+        // Format time for SRT file (hh:mm:ss,ms)
+        function formatSrtTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            const ms = Math.floor((seconds % 1) * 1000);
+            return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')},${ms.toString().padStart(3, '0')}`;
+        }
+
+        // Format time for VTT file (hh:mm:ss.ms)
+        function formatVttTime(seconds) {
+            const hours = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = Math.floor(seconds % 60);
+            const ms = Math.floor((seconds % 1) * 1000);
+            return `${hours.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}.${ms.toString().padStart(3, '0')}`;
+        }
+
+        // Display download instructions
+        function displayDownloadInstructions(url, filename) {
+            // Create a modal with instructions
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            
+            const content = document.createElement('div');
+            content.className = 'bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-lg w-full';
+            
+            const title = document.createElement('h3');
+            title.className = 'text-lg font-bold mb-4 dark:text-white';
+            title.textContent = 'Download Subtitle File';
+            
+            const instructions = document.createElement('p');
+            instructions.className = 'mb-4 dark:text-white';
+            instructions.textContent = 'To download the subtitle file:';
+            
+            const steps = document.createElement('ol');
+            steps.className = 'list-decimal pl-5 mb-4 dark:text-white';
+            
+            const step1 = document.createElement('li');
+            step1.className = 'mb-2';
+            step1.textContent = 'Click the link below';
+            
+            const step2 = document.createElement('li');
+            step2.className = 'mb-2';
+            step2.textContent = 'When the file opens in a new tab, press Ctrl+S (or Cmd+S on Mac)';
+            
+            const step3 = document.createElement('li');
+            step3.textContent = 'Save the file to your computer';
+            
+            steps.appendChild(step1);
+            steps.appendChild(step2);
+            steps.appendChild(step3);
+            
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.className = 'block w-full py-2 px-4 bg-[#5D5CDE] hover:bg-[#4a49b8] text-white font-semibold rounded-lg shadow-md text-center mb-4 dark:bg-[#6A6AEB] dark:hover:bg-[#5858D9]';
+            link.textContent = `Open ${filename}`;
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'w-full py-2 px-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md text-center dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600';
+            closeBtn.textContent = 'Close';
+            closeBtn.addEventListener('click', () => {
+                document.body.removeChild(modal);
+            });
+            
+            content.appendChild(title);
+            content.appendChild(instructions);
+            content.appendChild(steps);
+            content.appendChild(link);
+            content.appendChild(closeBtn);
+            modal.appendChild(content);
+            
+            document.body.appendChild(modal);
+        }
+
+        // Embed subtitles in video
+        embedSubtitlesBtn.addEventListener('click', function() {
+            if (subtitles.length === 0 || !videoObjectURL) return;
+            
+            // Create a video element with track element for subtitles
+            const containerDiv = document.createElement('div');
+            containerDiv.className = 'fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center p-4 z-50';
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg max-w-4xl w-full';
+            
+            const title = document.createElement('h3');
+            title.className = 'text-lg font-bold mb-4 dark:text-white';
+            title.textContent = 'Video with Embedded Subtitles';
+            
+            const instructions = document.createElement('p');
+            instructions.className = 'mb-4 dark:text-white';
+            instructions.textContent = 'To save this video with subtitles, right-click on the video and select "Save video as".';
+            
+            const videoWithSubtitles = document.createElement('video');
+            videoWithSubtitles.className = 'w-full rounded-lg mb-4';
+            videoWithSubtitles.controls = true;
+            videoWithSubtitles.src = videoObjectURL;
+            
+            // Create VTT blob and track element
+            let vttContent = 'WEBVTT\n\n';
+            subtitles.forEach((subtitle) => {
+                vttContent += `${formatVttTime(subtitle.start)} --> ${formatVttTime(subtitle.end)}\n`;
+                vttContent += `${subtitle.text}\n\n`;
+            });
+            
+            const vttBlob = new Blob([vttContent], { type: 'text/vtt' });
+            const vttURL = URL.createObjectURL(vttBlob);
+            
+            const track = document.createElement('track');
+            track.kind = 'subtitles';
+            track.label = 'Generated Subtitles';
+            track.src = vttURL;
+            track.default = true;
+            
+            videoWithSubtitles.appendChild(track);
+            
+            const closeBtn = document.createElement('button');
+            closeBtn.className = 'w-full py-2 px-4 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold rounded-lg shadow-md text-center dark:bg-gray-700 dark:text-white dark:hover:bg-gray-600';
+            closeBtn.textContent = 'Close';
+            closeBtn.addEventListener('click', () => {
+                document.body.removeChild(containerDiv);
+            });
+            
+            contentDiv.appendChild(title);
+            contentDiv.appendChild(instructions);
+            contentDiv.appendChild(videoWithSubtitles);
+            contentDiv.appendChild(closeBtn);
+            containerDiv.appendChild(contentDiv);
+            
+            document.body.appendChild(containerDiv);
+            
+            // Load the subtitles
+            videoWithSubtitles.textTracks[0].mode = 'showing';
+        });
+    </script>
+</body>
+</html>

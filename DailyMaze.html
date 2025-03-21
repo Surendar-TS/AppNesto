@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Daily Maze Challenge</title>
+    <style>
+        :root {
+            --primary-color: #5D5CDE;
+            --bg-color: #FFFFFF;
+            --text-color: #181818;
+            --success-color: #4CAF50;
+            --error-color: #F44336;
+            --border-color: #E0E0E0;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+        }
+
+        .dark {
+            --bg-color: #181818;
+            --text-color: #FFFFFF;
+            --border-color: #333333;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s ease, color 0.3s ease;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 800px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        header {
+            width: 100%;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        .info-bar {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            background-color: var(--bg-color);
+            padding: 0.75rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            border: 1px solid var(--border-color);
+            margin-bottom: 1rem;
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .info-label {
+            font-size: 0.875rem;
+            font-weight: 600;
+            margin-bottom: 0.25rem;
+        }
+
+        .info-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+        }
+
+        #maze-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 1/1;
+            max-width: 500px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 12px var(--shadow-color);
+            background-color: #f5f5f5;
+            touch-action: none;
+        }
+
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
+        }
+
+        #maze-canvas {
+            z-index: 1;
+        }
+
+        #path-canvas {
+            z-index: 2;
+        }
+
+        .button-container {
+            display: flex;
+            gap: 1rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        button {
+            padding: 0.5rem 1.25rem;
+            font-size: 1rem;
+            font-weight: 600;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: transform 0.2s ease, opacity 0.2s ease;
+            box-shadow: 0 2px 4px var(--shadow-color);
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        button:active {
+            transform: translateY(2px);
+        }
+
+        .instructions {
+            margin-top: 1.5rem;
+            text-align: center;
+            padding: 1rem;
+            background-color: var(--bg-color);
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: 0 2px 8px var(--shadow-color);
+            max-width: 500px;
+        }
+
+        .instructions h2 {
+            margin-bottom: 0.5rem;
+            font-size: 1.25rem;
+            color: var(--primary-color);
+        }
+
+        .instructions p {
+            margin-bottom: 0.75rem;
+            line-height: 1.5;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal-content {
+            background-color: var(--bg-color);
+            padding: 2rem;
+            border-radius: 12px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+            transform: translateY(-20px);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.visible {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .modal.visible .modal-content {
+            transform: translateY(0);
+        }
+
+        .modal h2 {
+            margin-bottom: 1rem;
+            font-size: 1.5rem;
+            color: var(--primary-color);
+        }
+
+        .modal p {
+            margin-bottom: 1.5rem;
+            line-height: 1.6;
+        }
+
+        .modal-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 1rem;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .info-bar {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: center;
+            }
+
+            .info-item {
+                width: 100%;
+                flex-direction: row;
+                justify-content: space-between;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Daily Maze Challenge</h1>
+            <p class="date-display" id="current-date"></p>
+        </header>
+
+        <div class="info-bar">
+            <div class="info-item">
+                <span class="info-label">Timer</span>
+                <span class="info-value" id="timer-display">00:00</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Today's Score</span>
+                <span class="info-value" id="today-score">0</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">Total Score</span>
+                <span class="info-value" id="total-score">0</span>
+            </div>
+        </div>
+
+        <div id="maze-container">
+            <canvas id="maze-canvas"></canvas>
+            <canvas id="path-canvas"></canvas>
+        </div>
+
+        <div class="button-container">
+            <button id="reset-button">Reset Maze</button>
+            <button id="new-maze-button">Generate New Maze</button>
+        </div>
+
+        <div class="instructions">
+            <h2>How to Play</h2>
+            <p>Draw a path from the green start point to the red finish point without crossing any walls.</p>
+            <p>A new maze is generated each day. Your score is based on completion time.</p>
+            <p>If you can't complete the maze, points will be deducted from your score.</p>
+        </div>
+    </div>
+
+    <div class="modal" id="completion-modal">
+        <div class="modal-content">
+            <h2 id="modal-title">Maze Completed!</h2>
+            <p id="modal-message">Congratulations! You've completed today's maze.</p>
+            <p>Your time: <span id="completion-time">00:00</span></p>
+            <p>Points earned: <span id="points-earned">0</span></p>
+            <div class="modal-buttons">
+                <button id="continue-button">Continue</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Check for dark mode preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Constants for the maze
+        const CELL_SIZE = 20;
+        const WALL_THICKNESS = 2;
+        
+        // State variables
+        let maze = [];
+        let rows = 0;
+        let cols = 0;
+        let isDrawing = false;
+        let timerInterval = null;
+        let startTime = 0;
+        let elapsedTime = 0;
+        let currentPath = [];
+        let mazeCompleted = false;
+        let dailyScore = 0;
+        let dailyAttempts = 0;
+        let seed = 0;
+        
+        // DOM Elements
+        const mazeCanvas = document.getElementById('maze-canvas');
+        const mazeCtx = mazeCanvas.getContext('2d');
+        const pathCanvas = document.getElementById('path-canvas');
+        const pathCtx = pathCanvas.getContext('2d');
+        const timerDisplay = document.getElementById('timer-display');
+        const todayScoreDisplay = document.getElementById('today-score');
+        const totalScoreDisplay = document.getElementById('total-score');
+        const currentDateDisplay = document.getElementById('current-date');
+        const resetButton = document.getElementById('reset-button');
+        const newMazeButton = document.getElementById('new-maze-button');
+        const completionModal = document.getElementById('completion-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalMessage = document.getElementById('modal-message');
+        const completionTimeDisplay = document.getElementById('completion-time');
+        const pointsEarnedDisplay = document.getElementById('points-earned');
+        const continueButton = document.getElementById('continue-button');
+        
+        // Point coordinates
+        let startPoint = { x: 0, y: 0 };
+        let endPoint = { x: 0, y: 0 };
+        let currentPoint = { x: 0, y: 0 };
+        
+        // Initialize
+        function init() {
+            setupCanvas();
+            loadScoreData();
+            setupEventListeners();
+            updateDateDisplay();
+            
+            // Check if we need to generate a new maze for today
+            checkDailyMaze();
+            
+            // Render initial state
+            drawMaze();
+            updateScoreDisplay();
+        }
+        
+        // Setup canvas dimensions based on screen size
+        function setupCanvas() {
+            const container = document.getElementById('maze-container');
+            const size = container.clientWidth;
+            
+            mazeCanvas.width = size;
+            mazeCanvas.height = size;
+            pathCanvas.width = size;
+            pathCanvas.height = size;
+            
+            // Calculate rows and cols based on available space
+            rows = Math.floor(size / CELL_SIZE);
+            cols = Math.floor(size / CELL_SIZE);
+            
+            // Make sure rows and cols are odd numbers for better maze generation
+            rows = rows % 2 === 0 ? rows - 1 : rows;
+            cols = cols % 2 === 0 ? cols - 1 : cols;
+        }
+        
+        // Set up event listeners
+        function setupEventListeners() {
+            // Mouse events for drawing
+            pathCanvas.addEventListener('mousedown', startDrawing);
+            pathCanvas.addEventListener('mousemove', continuePath);
+            pathCanvas.addEventListener('mouseup', endDrawing);
+            pathCanvas.addEventListener('mouseleave', endDrawing);
+            
+            // Touch events for mobile
+            pathCanvas.addEventListener('touchstart', handleTouchStart);
+            pathCanvas.addEventListener('touchmove', handleTouchMove);
+            pathCanvas.addEventListener('touchend', handleTouchEnd);
+            
+            // Buttons
+            resetButton.addEventListener('click', resetMaze);
+            newMazeButton.addEventListener('click', generateNewMaze);
+            continueButton.addEventListener('click', closeModal);
+            
+            // Resize event
+            window.addEventListener('resize', handleResize);
+        }
+        
+        // Generate a seeded random number
+        function seededRandom() {
+            seed = (seed * 9301 + 49297) % 233280;
+            return seed / 233280;
+        }
+        
+        // Set random seed based on date
+        function setSeedFromDate(date) {
+            const year = date.getFullYear();
+            const month = date.getMonth();
+            const day = date.getDate();
+            seed = year * 10000 + month * 100 + day;
+        }
+        
+        // Check if we need to generate a new maze for today
+        function checkDailyMaze() {
+            const today = new Date();
+            const dateString = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+            
+            const lastMazeDate = localStorage.getItem('lastMazeDate');
+            
+            if (lastMazeDate !== dateString) {
+                // New day, generate new maze
+                setSeedFromDate(today);
+                localStorage.setItem('lastMazeDate', dateString);
+                
+                // Reset daily score and attempts
+                dailyScore = 0;
+                dailyAttempts = 0;
+                localStorage.setItem('dailyScore', dailyScore);
+                localStorage.setItem('dailyAttempts', dailyAttempts);
+                
+                generateMaze();
+            } else {
+                // Load existing maze for today
+                const savedMaze = localStorage.getItem('currentMaze');
+                if (savedMaze) {
+                    maze = JSON.parse(savedMaze);
+                    
+                    // Retrieve saved start and end points
+                    const savedStartPoint = localStorage.getItem('startPoint');
+                    const savedEndPoint = localStorage.getItem('endPoint');
+                    
+                    if (savedStartPoint && savedEndPoint) {
+                        startPoint = JSON.parse(savedStartPoint);
+                        endPoint = JSON.parse(savedEndPoint);
+                    }
+                } else {
+                    setSeedFromDate(today);
+                    generateMaze();
+                }
+            }
+        }
+        
+        // Load score data from localStorage
+        function loadScoreData() {
+            const totalScore = localStorage.getItem('totalScore');
+            if (totalScore) {
+                updateTotalScore(parseInt(totalScore));
+            } else {
+                updateTotalScore(0);
+            }
+            
+            const savedDailyScore = localStorage.getItem('dailyScore');
+            if (savedDailyScore) {
+                dailyScore = parseInt(savedDailyScore);
+            }
+            
+            const savedDailyAttempts = localStorage.getItem('dailyAttempts');
+            if (savedDailyAttempts) {
+                dailyAttempts = parseInt(savedDailyAttempts);
+            }
+        }
+        
+        // Update the date display
+        function updateDateDisplay() {
+            const today = new Date();
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            currentDateDisplay.textContent = today.toLocaleDateString(undefined, options);
+        }
+        
+        // Generate a new maze using a recursive backtracker algorithm
+        function generateMaze() {
+            // Initialize maze grid with walls
+            maze = Array(rows).fill().map(() => Array(cols).fill(1));
+            
+            // Start at a random odd position
+            const startX = Math.floor(seededRandom() * Math.floor(cols / 2)) * 2 + 1;
+            const startY = Math.floor(seededRandom() * Math.floor(rows / 2)) * 2 + 1;
+            
+            // Mark the starting position as a path
+            maze[startY][startX] = 0;
+            
+            // Create a stack for backtracking
+            const stack = [{x: startX, y: startY}];
+            
+            // Directions: up, right, down, left
+            const directions = [
+                {x: 0, y: -2},
+                {x: 2, y: 0},
+                {x: 0, y: 2},
+                {x: -2, y: 0}
+            ];
+            
+            // Carve paths
+            while (stack.length > 0) {
+                const current = stack[stack.length - 1];
+                
+                // Get all valid neighbors that haven't been visited
+                const neighbors = [];
+                
+                for (const dir of directions) {
+                    const nx = current.x + dir.x;
+                    const ny = current.y + dir.y;
+                    
+                    if (nx >= 0 && nx < cols && ny >= 0 && ny < rows && maze[ny][nx] === 1) {
+                        neighbors.push({x: nx, y: ny, dx: dir.x / 2, dy: dir.y / 2});
+                    }
+                }
+                
+                if (neighbors.length > 0) {
+                    // Choose a random neighbor
+                    const idx = Math.floor(seededRandom() * neighbors.length);
+                    const neighbor = neighbors[idx];
+                    
+                    // Remove the wall between current and neighbor
+                    maze[current.y + neighbor.dy][current.x + neighbor.dx] = 0;
+                    
+                    // Mark the neighbor as a path
+                    maze[neighbor.y][neighbor.x] = 0;
+                    
+                    // Push the neighbor to the stack
+                    stack.push({x: neighbor.x, y: neighbor.y});
+                } else {
+                    // Backtrack
+                    stack.pop();
+                }
+            }
+            
+            // Set start and end points
+            selectStartAndEndPoints();
+            
+            // Save the maze
+            localStorage.setItem('currentMaze', JSON.stringify(maze));
+            localStorage.setItem('startPoint', JSON.stringify(startPoint));
+            localStorage.setItem('endPoint', JSON.stringify(endPoint));
+            
+            // Reset state
+            resetState();
+        }
+        
+        // Select start and end points that are far apart
+        function selectStartAndEndPoints() {
+            // Find all valid path cells (cells with value 0)
+            const pathCells = [];
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    if (maze[y][x] === 0) {
+                        pathCells.push({x, y});
+                    }
+                }
+            }
+            
+            // Make sure we have path cells
+            if (pathCells.length < 2) {
+                console.error("Not enough path cells for start and end points");
+                return;
+            }
+            
+            // Select a random cell for start point
+            const startIdx = Math.floor(seededRandom() * pathCells.length);
+            const start = pathCells[startIdx];
+            
+            // Remove start from available cells
+            pathCells.splice(startIdx, 1);
+            
+            // Calculate cell distances from start
+            const distances = pathCells.map(cell => {
+                const dx = cell.x - start.x;
+                const dy = cell.y - start.y;
+                return {
+                    cell,
+                    distance: Math.sqrt(dx * dx + dy * dy)
+                };
+            });
+            
+            // Sort by distance (descending)
+            distances.sort((a, b) => b.distance - a.distance);
+            
+            // Take a random cell from the top 20% farthest cells
+            const topCount = Math.max(1, Math.floor(distances.length * 0.2));
+            const endIdx = Math.floor(seededRandom() * topCount);
+            const end = distances[endIdx].cell;
+            
+            // Set the start and end points with canvas coordinates
+            startPoint = {
+                x: start.x * CELL_SIZE + CELL_SIZE / 2,
+                y: start.y * CELL_SIZE + CELL_SIZE / 2
+            };
+            
+            endPoint = {
+                x: end.x * CELL_SIZE + CELL_SIZE / 2,
+                y: end.y * CELL_SIZE + CELL_SIZE / 2
+            };
+        }
+        
+        // Draw the maze
+        function drawMaze() {
+            // Clear both canvases
+            mazeCtx.clearRect(0, 0, mazeCanvas.width, mazeCanvas.height);
+            pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
+            
+            // Set wall color based on dark mode
+            const wallColor = document.documentElement.classList.contains('dark') ? '#555' : '#222';
+            
+            // Draw walls
+            mazeCtx.fillStyle = wallColor;
+            for (let y = 0; y < rows; y++) {
+                for (let x = 0; x < cols; x++) {
+                    if (maze[y][x] === 1) {
+                        mazeCtx.fillRect(
+                            x * CELL_SIZE,
+                            y * CELL_SIZE,
+                            CELL_SIZE,
+                            CELL_SIZE
+                        );
+                    }
+                }
+            }
+            
+            // Draw start point
+            mazeCtx.fillStyle = '#4CAF50';
+            mazeCtx.beginPath();
+            mazeCtx.arc(startPoint.x, startPoint.y, CELL_SIZE / 3, 0, Math.PI * 2);
+            mazeCtx.fill();
+            
+            // Draw end point
+            mazeCtx.fillStyle = '#F44336';
+            mazeCtx.beginPath();
+            mazeCtx.arc(endPoint.x, endPoint.y, CELL_SIZE / 3, 0, Math.PI * 2);
+            mazeCtx.fill();
+            
+            // Redraw the current path if it exists
+            if (currentPath.length > 0) {
+                drawPath();
+            }
+        }
+        
+        // Draw the user's path
+        function drawPath() {
+            pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
+            
+            if (currentPath.length < 2) return;
+            
+            // Draw line
+            pathCtx.strokeStyle = '#5D5CDE';
+            pathCtx.lineWidth = CELL_SIZE / 4;
+            pathCtx.lineCap = 'round';
+            pathCtx.lineJoin = 'round';
+            
+            pathCtx.beginPath();
+            pathCtx.moveTo(currentPath[0].x, currentPath[0].y);
+            
+            for (let i = 1; i < currentPath.length; i++) {
+                pathCtx.lineTo(currentPath[i].x, currentPath[i].y);
+            }
+            
+            pathCtx.stroke();
+        }
+        
+        // Handle mouse down to start drawing
+        function startDrawing(e) {
+            if (mazeCompleted) return;
+            
+            const rect = pathCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Check if starting near the start point
+            const distanceToStart = Math.sqrt(
+                Math.pow(x - startPoint.x, 2) + Math.pow(y - startPoint.y, 2)
+            );
+            
+            if (distanceToStart <= CELL_SIZE) {
+                isDrawing = true;
+                currentPoint = {x: startPoint.x, y: startPoint.y};
+                currentPath = [{x: startPoint.x, y: startPoint.y}];
+                
+                // Start the timer
+                startTimer();
+            }
+        }
+        
+        // Handle mouse move to continue the path
+        function continuePath(e) {
+            if (!isDrawing) return;
+            
+            const rect = pathCanvas.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            
+            // Add point to the path
+            currentPath.push({x, y});
+            currentPoint = {x, y};
+            
+            // Redraw the path
+            drawPath();
+            
+            // Check for collisions with walls
+            if (checkWallCollision(x, y)) {
+                endDrawing();
+                showFailureModal();
+                return;
+            }
+            
+            // Check if reached the end point
+            const distanceToEnd = Math.sqrt(
+                Math.pow(x - endPoint.x, 2) + Math.pow(y - endPoint.y, 2)
+            );
+            
+            if (distanceToEnd <= CELL_SIZE / 2) {
+                completeMaze();
+            }
+        }
+        
+        // Handle mouse up to end drawing
+        function endDrawing() {
+            isDrawing = false;
+        }
+        
+        // Handle touch events
+        function handleTouchStart(e) {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                startDrawing(mouseEvent);
+            }
+        }
+        
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                continuePath(mouseEvent);
+            }
+        }
+        
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            endDrawing();
+        }
+        
+        // Check for wall collisions
+        function checkWallCollision(x, y) {
+            // Convert canvas coordinates to grid coordinates
+            const gridX = Math.floor(x / CELL_SIZE);
+            const gridY = Math.floor(y / CELL_SIZE);
+            
+            // Check if within maze boundaries
+            if (gridX < 0 || gridX >= cols || gridY < 0 || gridY >= rows) {
+                return true;
+            }
+            
+            // Check if hitting a wall
+            return maze[gridY][gridX] === 1;
+        }
+        
+        // Start the timer
+        function startTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+            }
+            
+            startTime = Date.now() - elapsedTime;
+            
+            timerInterval = setInterval(() => {
+                elapsedTime = Date.now() - startTime;
+                updateTimerDisplay();
+            }, 100);
+        }
+        
+        // Stop the timer
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+        
+        // Update the timer display
+        function updateTimerDisplay() {
+            const seconds = Math.floor(elapsedTime / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const remainingSeconds = seconds % 60;
+            
+            timerDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${remainingSeconds.toString().padStart(2, '0')}`;
+        }
+        
+        // Mark the maze as completed
+        function completeMaze() {
+            if (mazeCompleted) return;
+            
+            mazeCompleted = true;
+            stopTimer();
+            
+            // Calculate score based on time
+            const seconds = Math.floor(elapsedTime / 1000);
+            const baseScore = 1000;
+            const timeDeduction = Math.min(800, seconds * 5);
+            const attemptsDeduction = dailyAttempts * 50;
+            const score = Math.max(100, baseScore - timeDeduction - attemptsDeduction);
+            
+            // Update scores
+            dailyScore += score;
+            updateTotalScore(getTotalScore() + score);
+            
+            // Save to localStorage
+            localStorage.setItem('dailyScore', dailyScore);
+            updateScoreDisplay();
+            
+            // Show completion modal
+            showCompletionModal(score);
+        }
+        
+        // Show the completion modal
+        function showCompletionModal(score) {
+            modalTitle.textContent = 'Maze Completed!';
+            modalMessage.textContent = 'Congratulations! You\'ve completed today\'s maze.';
+            
+            const minutes = Math.floor(elapsedTime / 60000);
+            const seconds = Math.floor((elapsedTime % 60000) / 1000);
+            completionTimeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+            
+            pointsEarnedDisplay.textContent = score;
+            
+            completionModal.classList.add('visible');
+        }
+        
+        // Show the failure modal
+        function showFailureModal() {
+            dailyAttempts++;
+            localStorage.setItem('dailyAttempts', dailyAttempts);
+            
+            // Penalty for failing
+            const penalty = Math.min(100, 20 * dailyAttempts);
+            const newDailyScore = Math.max(0, dailyScore - penalty);
+            const scoreDifference = dailyScore - newDailyScore;
+            
+            dailyScore = newDailyScore;
+            updateTotalScore(Math.max(0, getTotalScore() - scoreDifference));
+            
+            localStorage.setItem('dailyScore', dailyScore);
+            localStorage.setItem('totalScore', getTotalScore());
+            
+            updateScoreDisplay();
+            
+            // Show failed modal
+            modalTitle.textContent = 'Maze Failed!';
+            modalMessage.textContent = 'You hit a wall! Try again.';
+            completionTimeDisplay.textContent = timerDisplay.textContent;
+            pointsEarnedDisplay.textContent = `-${scoreDifference}`;
+            
+            completionModal.classList.add('visible');
+        }
+        
+        // Close the modal
+        function closeModal() {
+            completionModal.classList.remove('visible');
+            resetMaze();
+        }
+        
+        // Reset the current maze
+        function resetMaze() {
+            resetState();
+            drawMaze();
+        }
+        
+        // Generate a new maze
+        function generateNewMaze() {
+            // Generate a random seed
+            seed = Math.floor(Math.random() * 10000000);
+            generateMaze();
+            drawMaze();
+        }
+        
+        // Reset state variables
+        function resetState() {
+            isDrawing = false;
+            mazeCompleted = false;
+            currentPath = [];
+            elapsedTime = 0;
+            
+            stopTimer();
+            updateTimerDisplay();
+            
+            pathCtx.clearRect(0, 0, pathCanvas.width, pathCanvas.height);
+        }
+        
+        // Handle window resize
+        function handleResize() {
+            // Store the current state
+            const currentMaze = maze;
+            const currentStartPoint = startPoint;
+            const currentEndPoint = endPoint;
+            
+            // Re-setup canvas dimensions
+            setupCanvas();
+            
+            // Restore the state if we have it
+            if (currentMaze.length > 0) {
+                maze = currentMaze;
+                
+                // Scale start and end points to new dimensions
+                const scaleX = mazeCanvas.width / (cols * CELL_SIZE);
+                const scaleY = mazeCanvas.height / (rows * CELL_SIZE);
+                
+                startPoint = {
+                    x: currentStartPoint.x * scaleX,
+                    y: currentStartPoint.y * scaleY
+                };
+                
+                endPoint = {
+                    x: currentEndPoint.x * scaleX,
+                    y: currentEndPoint.y * scaleY
+                };
+                
+                drawMaze();
+            }
+        }
+        
+        // Get the total score
+        function getTotalScore() {
+            const totalScore = localStorage.getItem('totalScore');
+            return totalScore ? parseInt(totalScore) : 0;
+        }
+        
+        // Update the total score
+        function updateTotalScore(score) {
+            localStorage.setItem('totalScore', score);
+            totalScoreDisplay.textContent = score;
+        }
+        
+        // Update score display
+        function updateScoreDisplay() {
+            todayScoreDisplay.textContent = dailyScore;
+            totalScoreDisplay.textContent = getTotalScore();
+        }
+        
+        // Initialize on load
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>

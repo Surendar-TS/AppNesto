@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Recipe Finder</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        secondary: '#F3F4F6',
+                        dark: {
+                            primary: '#6665E5',
+                            secondary: '#2D2D3A'
+                        }
+                    }
+                }
+            }
+        }
+
+        // Check for dark mode preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+    </script>
+    <style>
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            from {
+                transform: rotate(0deg);
+            }
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .recipe-card {
+            transition: transform 0.2s ease-in-out;
+        }
+        
+        .recipe-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .badge {
+            transition: background-color 0.2s ease;
+        }
+
+        .ingredient-tag {
+            animation: fadeIn 0.3s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(5px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+
+        .dark ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 min-h-screen transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8 max-w-6xl">
+        <header class="mb-8">
+            <h1 class="text-3xl md:text-4xl font-bold text-center mb-2">Recipe Finder</h1>
+            <p class="text-center text-gray-600 dark:text-gray-400">Find recipes using ingredients you already have</p>
+        </header>
+
+        <!-- Main Navigation -->
+        <div class="mb-8">
+            <div class="flex flex-wrap border-b border-gray-200 dark:border-gray-700 mb-4">
+                <button id="browse-tab" class="py-2 px-4 font-medium text-sm border-b-2 border-primary dark:border-dark-primary text-primary dark:text-dark-primary">
+                    Browse Recipes
+                </button>
+                <button id="ingredients-tab" class="py-2 px-4 font-medium text-sm border-b-2 border-transparent text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300">
+                    Find by Ingredients
+                </button>
+            </div>
+        </div>
+
+        <!-- Browse Recipes Section -->
+        <div id="browse-section" class="mb-8">
+            <div class="flex flex-wrap gap-4 mb-6">
+                <!-- Search Input -->
+                <div class="w-full md:w-1/2 lg:w-1/3">
+                    <div class="relative">
+                        <input id="search-input" type="text" placeholder="Search recipes..." class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-base focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary">
+                        <span class="absolute right-3 top-2.5 text-gray-400">
+                            <i class="fas fa-search"></i>
+                        </span>
+                    </div>
+                </div>
+
+                <!-- Category Filter -->
+                <div class="w-full md:w-1/2 lg:w-1/3">
+                    <select id="category-filter" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-base focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary">
+                        <option value="">All Categories</option>
+                        <option value="Breakfast">Breakfast</option>
+                        <option value="Lunch">Lunch</option>
+                        <option value="Dinner">Dinner</option>
+                        <option value="Dessert">Dessert</option>
+                        <option value="Appetizer">Appetizer</option>
+                        <option value="Snack">Snack</option>
+                        <option value="Soup">Soup</option>
+                        <option value="Salad">Salad</option>
+                        <option value="Drink">Drink</option>
+                    </select>
+                </div>
+
+                <!-- Dietary Filter -->
+                <div class="w-full md:w-1/2 lg:w-1/3">
+                    <select id="dietary-filter" class="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-base focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary">
+                        <option value="">All Dietary Types</option>
+                        <option value="Vegetarian">Vegetarian</option>
+                        <option value="Vegan">Vegan</option>
+                        <option value="Gluten-Free">Gluten-Free</option>
+                        <option value="Dairy-Free">Dairy-Free</option>
+                        <option value="Low-Carb">Low-Carb</option>
+                        <option value="Keto">Keto</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Recipe Grid -->
+            <div id="recipe-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Recipe cards will be added here dynamically -->
+                <div class="flex justify-center items-center py-16">
+                    <div class="spinner mr-3 h-5 w-5 text-primary dark:text-dark-primary">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                    <p>Loading recipes...</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Find by Ingredients Section -->
+        <div id="ingredients-section" class="mb-8 hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg p-6 shadow-sm mb-6">
+                <h2 class="text-xl font-semibold mb-4">What ingredients do you have?</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-4">Enter ingredients you have, and we'll find recipes you can make without having to buy anything else!</p>
+                
+                <!-- Ingredient Input -->
+                <div class="flex mb-4">
+                    <input id="ingredient-input" type="text" placeholder="Type an ingredient..." class="flex-grow px-4 py-2 rounded-l-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-base focus:outline-none focus:ring-2 focus:ring-primary dark:focus:ring-dark-primary">
+                    <button id="add-ingredient-btn" class="px-4 py-2 bg-primary dark:bg-dark-primary text-white rounded-r-lg hover:bg-opacity-90 focus:outline-none">
+                        Add
+                    </button>
+                </div>
+
+                <!-- Suggestions -->
+                <div id="ingredient-suggestions" class="mb-4 hidden">
+                    <div class="flex flex-wrap gap-2 max-h-32 overflow-y-auto p-2 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                        <!-- Suggestion items will be added here -->
+                    </div>
+                </div>
+                
+                <!-- Selected Ingredients -->
+                <div id="selected-ingredients" class="mb-4">
+                    <div class="flex flex-wrap gap-2 min-h-10">
+                        <!-- Selected ingredient tags will appear here -->
+                        <p id="no-ingredients-msg" class="text-gray-500 dark:text-gray-400 text-sm italic">No ingredients added yet</p>
+                    </div>
+                </div>
+
+                <div class="flex justify-between items-center">
+                    <button id="clear-ingredients-btn" class="px-4 py-2 text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 focus:outline-none disabled:opacity-50" disabled>
+                        Clear All
+                    </button>
+                    <button id="find-recipes-btn" class="px-6 py-2 bg-primary dark:bg-dark-primary text-white rounded-lg hover:bg-opacity-90 focus:outline-none disabled:opacity-50" disabled>
+                        Find Recipes
+                    </button>
+                </div>
+            </div>
+
+            <!-- Ingredient Matches Results -->
+            <div id="ingredient-results" class="hidden">
+                <h2 class="text-xl font-semibold mb-4">Recipes with your ingredients</h2>
+                <div id="ingredient-matches-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                    <!-- Matching recipe cards will be added here -->
+                </div>
+                <div id="no-matches-message" class="text-center py-12 hidden">
+                    <i class="fas fa-search text-4xl text-gray-400 mb-4"></i>
+                    <h3 class="text-xl font-medium mb-2">No matching recipes found</h3>
+                    <p class="text-gray-600 dark:text-gray-400">Try removing some ingredients or adding different ones</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recipe Detail Modal -->
+        <div id="recipe-modal" class="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col mx-4">
+                <div class="p-4 border-b border-gray-200 dark:border-gray-700 flex justify-between items-center">
+                    <h2 id="modal-title" class="text-xl font-semibold truncate">Recipe Details</h2>
+                    <button id="close-modal-btn" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 focus:outline-none">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+                <div class="overflow-y-auto p-4 flex-grow">
+                    <div id="modal-content" class="space-y-6">
+                        <!-- Recipe details will be populated here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample recipe data (in a real app, this would be fetched from a server)
+        const sampleRecipes = [
+            {
+                RecipeId: "1",
+                Name: "Simple Pancakes",
+                AuthorName: "Chef Maria",
+                CookTime: "10 mins",
+                PrepTime: "5 mins",
+                TotalTime: "15 mins",
+                DatePublished: "2023-01-15",
+                Description: "Fluffy, easy pancakes that are perfect for breakfast.",
+                Images: "https://images.unsplash.com/photo-1575853121743-60c24f0a7502?q=80&w=1964&auto=format&fit=crop",
+                RecipeCategory: "Breakfast",
+                Keywords: "Pancakes, Breakfast, Easy, Vegetarian",
+                RecipeIngredientQuantities: "1 cup, 2 tbsp, 1 tsp, 2, 3/4 cup, 2 tbsp",
+                RecipeIngredientParts: "all-purpose flour, sugar, baking powder, eggs, milk, melted butter",
+                AggregatedRating: "4.8",
+                ReviewCount: "245",
+                Calories: "250",
+                RecipeServings: "4",
+                RecipeInstructions: "1. Whisk flour, sugar, and baking powder in a bowl.\n2. In another bowl, beat eggs then add milk and melted butter.\n3. Combine wet and dry ingredients, stirring until just mixed.\n4. Heat a lightly oiled griddle over medium heat.\n5. Pour batter onto the griddle, using approximately 1/4 cup for each pancake.\n6. Cook until bubbles form on the surface, then flip and cook until browned on the other side."
+            },
+            {
+                RecipeId: "2",
+                Name: "Avocado Toast",
+                AuthorName: "Healthy Habits",
+                CookTime: "2 mins",
+                PrepTime: "5 mins",
+                TotalTime: "7 mins",
+                DatePublished: "2023-02-20",
+                Description: "Simple yet delicious avocado toast - perfect for a quick breakfast or snack.",
+                Images: "https://images.unsplash.com/photo-1603046891744-76176c7a1091?q=80&w=1974&auto=format&fit=crop",
+                RecipeCategory: "Breakfast, Snack",
+                Keywords: "Avocado, Toast, Breakfast, Healthy, Vegetarian, Vegan",
+                RecipeIngredientQuantities: "2 slices, 1, 1/4 tsp, 1/8 tsp, 1/8 tsp",
+                RecipeIngredientParts: "whole grain bread, ripe avocado, lemon juice, salt, black pepper",
+                AggregatedRating: "4.7",
+                ReviewCount: "187",
+                Calories: "220",
+                RecipeServings: "2",
+                RecipeInstructions: "1. Toast the bread until golden and firm.\n2. Remove the pit from the avocado and scoop the flesh into a bowl.\n3. Add lemon juice, salt, and pepper to the avocado and mash with a fork to your desired consistency.\n4. Spread the mashed avocado mixture evenly on the toasted bread.\n5. Add additional toppings as desired and serve immediately."
+            },
+            {
+                RecipeId: "3",
+                Name: "Spaghetti Aglio e Olio",
+                AuthorName: "Italian Classics",
+                CookTime: "10 mins",
+                PrepTime: "5 mins",
+                TotalTime: "15 mins",
+                DatePublished: "2023-03-05",
+                Description: "A classic Italian pasta dish with garlic, olive oil, and red pepper flakes.",
+                Images: "https://images.unsplash.com/photo-1589227365533-cee630bd59bd?q=80&w=2070&auto=format&fit=crop",
+                RecipeCategory: "Dinner, Lunch",
+                Keywords: "Pasta, Italian, Quick, Vegetarian, Vegan",
+                RecipeIngredientQuantities: "8 oz, 1/3 cup, 6 cloves, 1/2 tsp, 2 tbsp, 1/4 cup",
+                RecipeIngredientParts: "spaghetti, olive oil, garlic (thinly sliced), red pepper flakes, chopped parsley, reserved pasta water",
+                AggregatedRating: "4.9",
+                ReviewCount: "312",
+                Calories: "380",
+                RecipeServings: "2",
+                RecipeInstructions: "1. Cook spaghetti according to package instructions until al dente. Reserve 1/4 cup of pasta water before draining.\n2. In a large skillet, heat olive oil over medium heat.\n3. Add sliced garlic and red pepper flakes to the oil and cook until garlic is lightly golden, about 2 minutes.\n4. Add drained pasta to the skillet, along with reserved pasta water and chopped parsley.\n5. Toss everything together until pasta is coated with the sauce.\n6. Serve immediately, with additional red pepper flakes if desired."
+            },
+            {
+                RecipeId: "4",
+                Name: "Classic Caesar Salad",
+                AuthorName: "Salad Enthusiast",
+                CookTime: "0 mins",
+                PrepTime: "15 mins",
+                TotalTime: "15 mins",
+                DatePublished: "2023-04-10",
+                Description: "A crisp and refreshing Caesar salad with homemade dressing.",
+                Images: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?q=80&w=2070&auto=format&fit=crop",
+                RecipeCategory: "Salad, Lunch",
+                Keywords: "Salad, Caesar, Healthy, Lunch",
+                RecipeIngredientQuantities: "1 head, 1 cup, 1/2 cup, 1, 2 tbsp, 1/4 cup, 2 cloves, 1 tsp, 1/2 tsp, 1/4 cup",
+                RecipeIngredientParts: "romaine lettuce, croutons, parmesan cheese, lemon, dijon mustard, olive oil, garlic, worcestershire sauce, black pepper, mayonnaise",
+                AggregatedRating: "4.6",
+                ReviewCount: "178",
+                Calories: "320",
+                RecipeServings: "2",
+                RecipeInstructions: "1. Wash and dry romaine lettuce, then tear into bite-sized pieces.\n2. In a blender, combine garlic, mayonnaise, lemon juice, dijon mustard, worcestershire sauce, and black pepper.\n3. With the blender running, slowly drizzle in the olive oil until the dressing is smooth and emulsified.\n4. In a large bowl, toss the lettuce with enough dressing to coat the leaves.\n5. Add croutons and grated parmesan cheese.\n6. Toss again gently and serve immediately with additional parmesan if desired."
+            },
+            {
+                RecipeId: "5",
+                Name: "Chocolate Chip Cookies",
+                AuthorName: "Sweet Treats",
+                CookTime: "12 mins",
+                PrepTime: "15 mins",
+                TotalTime: "27 mins",
+                DatePublished: "2023-05-18",
+                Description: "Classic chocolate chip cookies that are crisp on the edges and chewy in the middle.",
+                Images: "https://images.unsplash.com/photo-1499636136210-6f4ee915583e?q=80&w=1999&auto=format&fit=crop",
+                RecipeCategory: "Dessert, Snack",
+                Keywords: "Cookies, Chocolate, Dessert, Baking",
+                RecipeIngredientQuantities: "1 cup, 1/2 cup, 3/4 cup, 2, 2 tsp, 2 1/4 cups, 1 tsp, 1/2 tsp, 2 cups",
+                RecipeIngredientParts: "unsalted butter, granulated sugar, brown sugar, eggs, vanilla extract, all-purpose flour, baking soda, salt, chocolate chips",
+                AggregatedRating: "4.9",
+                ReviewCount: "425",
+                Calories: "180",
+                RecipeServings: "24",
+                RecipeInstructions: "1. Preheat oven to 375°F (190°C).\n2. In a large bowl, cream together butter, granulated sugar, and brown sugar until light and fluffy.\n3. Beat in eggs one at a time, then stir in vanilla.\n4. In a separate bowl, combine flour, baking soda, and salt.\n5. Gradually add dry ingredients to the wet mixture and mix well.\n6. Fold in chocolate chips.\n7. Drop rounded tablespoons of dough onto ungreased baking sheets.\n8. Bake for 10-12 minutes or until edges are golden brown.\n9. Allow cookies to cool on baking sheet for 2 minutes before removing to wire racks."
+            },
+            {
+                RecipeId: "6",
+                Name: "Fresh Tomato Salsa",
+                AuthorName: "Mexican Kitchen",
+                CookTime: "0 mins",
+                PrepTime: "15 mins",
+                TotalTime: "15 mins",
+                DatePublished: "2023-06-22",
+                Description: "Bright, fresh salsa made with ripe tomatoes, onions, and cilantro.",
+                Images: "https://images.unsplash.com/photo-1600335895229-6e75511892c8?q=80&w=1974&auto=format&fit=crop",
+                RecipeCategory: "Appetizer, Snack",
+                Keywords: "Salsa, Mexican, Vegan, Gluten-Free, Dairy-Free",
+                RecipeIngredientQuantities: "4, 1/2, 2, 1, 1/4 cup, 1 tbsp, 1/2 tsp, 1/4 tsp",
+                RecipeIngredientParts: "ripe tomatoes, red onion, jalapeño peppers, lime, fresh cilantro, olive oil, salt, black pepper",
+                AggregatedRating: "4.7",
+                ReviewCount: "156",
+                Calories: "45",
+                RecipeServings: "6",
+                RecipeInstructions: "1. Dice tomatoes, removing excess seeds and juice.\n2. Finely dice red onion and jalapeños (remove seeds for less heat).\n3. Chop cilantro leaves.\n4. Combine all diced ingredients in a bowl.\n5. Add juice from the lime, olive oil, salt, and pepper.\n6. Mix well and let sit for at least 10 minutes to allow flavors to blend.\n7. Taste and adjust seasoning as needed.\n8. Serve with tortilla chips or as a topping for tacos."
+            },
+            {
+                RecipeId: "7",
+                Name: "Vegetable Stir Fry",
+                AuthorName: "Quick Meals",
+                CookTime: "10 mins",
+                PrepTime: "15 mins",
+                TotalTime: "25 mins",
+                DatePublished: "2023-07-14",
+                Description: "A colorful and quick vegetable stir fry with a savory sauce.",
+                Images: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?q=80&w=2070&auto=format&fit=crop",
+                RecipeCategory: "Dinner, Lunch",
+                Keywords: "Stir Fry, Vegetables, Quick, Healthy, Vegetarian, Vegan, Gluten-Free",
+                RecipeIngredientQuantities: "2 tbsp, 2 cloves, 1 tbsp, 1, 1, 1 cup, 1 cup, 1 cup, 2 tbsp, 1 tbsp, 1 tbsp, 1 tsp, 1/2 tsp",
+                RecipeIngredientParts: "vegetable oil, garlic, ginger, bell pepper, carrot, broccoli florets, snap peas, mushrooms, soy sauce, rice vinegar, sesame oil, sugar, cornstarch",
+                AggregatedRating: "4.5",
+                ReviewCount: "132",
+                Calories: "220",
+                RecipeServings: "4",
+                RecipeInstructions: "1. In a small bowl, mix soy sauce, rice vinegar, sesame oil, sugar, and cornstarch to make the sauce.\n2. Heat vegetable oil in a large wok or skillet over high heat.\n3. Add minced garlic and ginger, stir for 30 seconds until fragrant.\n4. Add sliced bell pepper, carrots, and broccoli. Stir fry for 3 minutes.\n5. Add snap peas and mushrooms, continue stir frying for 2 more minutes.\n6. Pour the sauce over the vegetables and stir constantly until the sauce thickens, about 1-2 minutes.\n7. Serve immediately over rice or noodles."
+            },
+            {
+                RecipeId: "8",
+                Name: "Greek Yogurt Parfait",
+                AuthorName: "Breakfast Champion",
+                CookTime: "0 mins",
+                PrepTime: "10 mins",
+                TotalTime: "10 mins",
+                DatePublished: "2023-08-09",
+                Description: "Layers of creamy Greek yogurt, fresh berries, and crunchy granola.",
+                Images: "https://images.unsplash.com/photo-1488477181946-6428a0291777?q=80&w=1974&auto=format&fit=crop",
+                RecipeCategory: "Breakfast, Snack",
+                Keywords: "Yogurt, Parfait, Breakfast, Healthy, Vegetarian, Gluten-Free",
+                RecipeIngredientQuantities: "2 cups, 1 cup, 1 cup, 1 cup, 2 tbsp, 1 tbsp",
+                RecipeIngredientParts: "Greek yogurt, mixed berries, granola, sliced banana, honey, chia seeds",
+                AggregatedRating: "4.8",
+                ReviewCount: "95",
+                Calories: "280",
+                RecipeServings: "2",
+                RecipeInstructions: "1. In two glass jars or bowls, layer the ingredients starting with Greek yogurt as the base.\n2. Add a layer of mixed berries.\n3. Sprinkle a layer of granola.\n4. Repeat layers until all ingredients are used.\n5. Top with sliced bananas, a drizzle of honey, and a sprinkle of chia seeds.\n6. Serve immediately or refrigerate for up to 6 hours (add granola just before serving to keep it crunchy)."
+            },
+            {
+                RecipeId: "9",
+                Name: "Crispy Baked Chicken Wings",
+                AuthorName: "Comfort Food Kitchen",
+                CookTime: "45 mins",
+                PrepTime: "10 mins",
+                TotalTime: "55 mins",
+                DatePublished: "2023-09-12",
+                Description: "Crispy, golden chicken wings baked in the oven instead of fried.",
+                Images: "https://images.unsplash.com/photo-1608039755401-742074f0548d?q=80&w=1936&auto=format&fit=crop",
+                RecipeCategory: "Dinner, Appetizer",
+                Keywords: "Chicken Wings, Baked, Appetizer, Gluten-Free, Keto, Low-Carb",
+                RecipeIngredientQuantities: "2 lbs, 1 tbsp, 1 tsp, 1 tsp, 1/2 tsp, 1/2 tsp, 1/4 tsp, 2 tbsp",
+                RecipeIngredientParts: "chicken wings, baking powder, garlic powder, onion powder, paprika, salt, black pepper, olive oil",
+                AggregatedRating: "4.6",
+                ReviewCount: "208",
+                Calories: "320",
+                RecipeServings: "4",
+                RecipeInstructions: "1. Preheat oven to 400°F (200°C) and line a baking sheet with parchment paper.\n2. Pat chicken wings dry with paper towels.\n3. In a large bowl, mix baking powder, garlic powder, onion powder, paprika, salt, and black pepper.\n4. Add wings to the bowl and toss to coat evenly with the seasoning mixture.\n5. Drizzle with olive oil and toss again.\n6. Arrange wings in a single layer on the prepared baking sheet.\n7. Bake for 45-50 minutes, turning halfway through, until skin is crispy and golden brown.\n8. Serve hot with your favorite dipping sauce."
+            },
+            {
+                RecipeId: "10",
+                Name: "Vegetarian Chili",
+                AuthorName: "Plant-Based Cooking",
+                CookTime: "30 mins",
+                PrepTime: "15 mins",
+                TotalTime: "45 mins",
+                DatePublished: "2023-10-25",
+                Description: "Hearty and flavorful vegetarian chili loaded with beans and vegetables.",
+                Images: "https://images.unsplash.com/photo-1564671546498-08c167e860e8?q=80&w=1974&auto=format&fit=crop",
+                RecipeCategory: "Dinner, Soup",
+                Keywords: "Chili, Vegetarian, Vegan, Gluten-Free, Dairy-Free, Beans",
+                RecipeIngredientQuantities: "1 tbsp, 1, 1, 2 cloves, 1, 2, 1 can (15 oz), 1 can (15 oz), 1 can (15 oz), 1 can (15 oz), 2 tsp, 1 tbsp, 1 tsp, 1 tsp, 1/4 tsp",
+                RecipeIngredientParts: "olive oil, onion, bell pepper, garlic, carrot, celery stalks, kidney beans, black beans, diced tomatoes, tomato sauce, chili powder, cumin, oregano, salt, cayenne pepper",
+                AggregatedRating: "4.7",
+                ReviewCount: "175",
+                Calories: "290",
+                RecipeServings: "6",
+                RecipeInstructions: "1. Heat olive oil in a large pot over medium heat.\n2. Add diced onion, bell pepper, and minced garlic. Sauté for 5 minutes until softened.\n3. Add diced carrots and celery. Cook for another 2-3 minutes.\n4. Stir in drained and rinsed beans, diced tomatoes with their juice, and tomato sauce.\n5. Add all the spices and stir well.\n6. Bring to a boil, then reduce heat to low. Cover and simmer for about 30 minutes, stirring occasionally.\n7. Taste and adjust seasonings if needed.\n8. Serve hot with optional toppings like avocado, cilantro, or a squeeze of lime."
+            }
+        ];
+
+        // Common ingredient suggestions for the app
+        const ingredientSuggestions = [
+            "all-purpose flour", "sugar", "baking powder", "eggs", "milk", "butter", 
+            "avocado", "bread", "lemon juice", "salt", "black pepper", "spaghetti", 
+            "olive oil", "garlic", "red pepper flakes", "parsley", "romaine lettuce",
+            "croutons", "parmesan cheese", "dijon mustard", "worcestershire sauce", 
+            "mayonnaise", "brown sugar", "vanilla extract", "baking soda", "chocolate chips",
+            "tomatoes", "red onion", "jalapeño peppers", "lime", "cilantro", "bell pepper",
+            "carrot", "broccoli", "snap peas", "mushrooms", "soy sauce", "rice vinegar", 
+            "sesame oil", "cornstarch", "Greek yogurt", "berries", "granola", "banana",
+            "honey", "chia seeds", "chicken wings", "baking powder", "garlic powder", 
+            "onion powder", "paprika", "kidney beans", "black beans", "diced tomatoes", 
+            "tomato sauce", "chili powder", "cumin", "oregano", "cayenne pepper"
+        ].sort();
+
+        // DOM elements
+        const browseTab = document.getElementById('browse-tab');
+        const ingredientsTab = document.getElementById('ingredients-tab');
+        const browseSection = document.getElementById('browse-section');
+        const ingredientsSection = document.getElementById('ingredients-section');
+        const recipeGrid = document.getElementById('recipe-grid');
+        const searchInput = document.getElementById('search-input');
+        const categoryFilter = document.getElementById('category-filter');
+        const dietaryFilter = document.getElementById('dietary-filter');
+        const ingredientInput = document.getElementById('ingredient-input');
+        const addIngredientBtn = document.getElementById('add-ingredient-btn');
+        const selectedIngredients = document.getElementById('selected-ingredients');
+        const noIngredientsMsg = document.getElementById('no-ingredients-msg');
+        const clearIngredientsBtn = document.getElementById('clear-ingredients-btn');
+        const findRecipesBtn = document.getElementById('find-recipes-btn');
+        const ingredientResults = document.getElementById('ingredient-results');
+        const ingredientMatchesGrid = document.getElementById('ingredient-matches-grid');
+        const noMatchesMessage = document.getElementById('no-matches-message');
+        const ingredientSuggestionsContainer = document.getElementById('ingredient-suggestions');
+        const recipeModal = document.getElementById('recipe-modal');
+        const modalTitle = document.getElementById('modal-title');
+        const modalContent = document.getElementById('modal-content');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+
+        // App state
+        let currentIngredients = [];
+        let filteredRecipes = [...sampleRecipes];
+        let activeTab = 'browse';
+
+        // Initialize the app
+        function initApp() {
+            loadRecipes(sampleRecipes);
+            setupEventListeners();
+            setupIngredientAutocomplete();
+        }
+
+        // Set up all event listeners
+        function setupEventListeners() {
+            // Tab switching
+            browseTab.addEventListener('click', () => switchTab('browse'));
+            ingredientsTab.addEventListener('click', () => switchTab('ingredients'));
+
+            // Recipe filtering
+            searchInput.addEventListener('input', filterRecipes);
+            categoryFilter.addEventListener('change', filterRecipes);
+            dietaryFilter.addEventListener('change', filterRecipes);
+
+            // Ingredient management
+            addIngredientBtn.addEventListener('click', addIngredient);
+            ingredientInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addIngredient();
+                }
+            });
+            clearIngredientsBtn.addEventListener('click', clearIngredients);
+            findRecipesBtn.addEventListener('click', findRecipesByIngredients);
+
+            // Modal controls
+            closeModalBtn.addEventListener('click', closeRecipeModal);
+            recipeModal.addEventListener('click', (e) => {
+                if (e.target === recipeModal) {
+                    closeRecipeModal();
+                }
+            });
+
+            // Keyboard listener for modal
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape' && !recipeModal.classList.contains('hidden')) {
+                    closeRecipeModal();
+                }
+            });
+        }
+
+        // Switch between tabs
+        function switchTab(tab) {
+            activeTab = tab;
+            
+            if (tab === 'browse') {
+                browseTab.classList.add('border-primary', 'dark:border-dark-primary', 'text-primary', 'dark:text-dark-primary');
+                browseTab.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+                
+                ingredientsTab.classList.remove('border-primary', 'dark:border-dark-primary', 'text-primary', 'dark:text-dark-primary');
+                ingredientsTab.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+                
+                browseSection.classList.remove('hidden');
+                ingredientsSection.classList.add('hidden');
+            } else {
+                ingredientsTab.classList.add('border-primary', 'dark:border-dark-primary', 'text-primary', 'dark:text-dark-primary');
+                ingredientsTab.classList.remove('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+                
+                browseTab.classList.remove('border-primary', 'dark:border-dark-primary', 'text-primary', 'dark:text-dark-primary');
+                browseTab.classList.add('border-transparent', 'text-gray-500', 'dark:text-gray-400');
+                
+                ingredientsSection.classList.remove('hidden');
+                browseSection.classList.add('hidden');
+            }
+        }
+
+        // Load recipes into the grid
+        function loadRecipes(recipes) {
+            recipeGrid.innerHTML = '';
+            
+            if (recipes.length === 0) {
+                recipeGrid.innerHTML = `
+                    <div class="col-span-full text-center py-12">
+                        <i class="fas fa-search text-4xl text-gray-400 mb-4"></i>
+                        <h3 class="text-xl font-medium mb-2">No recipes found</h3>
+                        <p class="text-gray-600 dark:text-gray-400">Try adjusting your filters</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            recipes.forEach(recipe => {
+                const card = createRecipeCard(recipe);
+                recipeGrid.appendChild(card);
+            });
+        }
+
+        // Create a recipe card element
+        function createRecipeCard(recipe) {
+            const card = document.createElement('div');
+            card.className = 'recipe-card bg-white dark:bg-gray-800 rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-shadow';
+            
+            // Extract categories and keywords
+            const categories = recipe.RecipeCategory ? recipe.RecipeCategory.split(', ') : [];
+            const keywords = recipe.Keywords ? recipe.Keywords.split(', ') : [];
+            
+            // Calculate rating stars
+            const rating = parseFloat(recipe.AggregatedRating) || 0;
+            const fullStars = Math.floor(rating);
+            const hasHalfStar = rating % 1 >= 0.5;
+            const emptyStars = 5 - fullStars - (hasHalfStar ? 1 : 0);
+            
+            let starsHTML = '';
+            for (let i = 0; i < fullStars; i++) {
+                starsHTML += '<i class="fas fa-star text-yellow-400"></i>';
+            }
+            if (hasHalfStar) {
+                starsHTML += '<i class="fas fa-star-half-alt text-yellow-400"></i>';
+            }
+            for (let i = 0; i < emptyStars; i++) {
+                starsHTML += '<i class="far fa-star text-yellow-400"></i>';
+            }
+            
+            // Generate badge HTML for categories
+            let badgesHTML = '';
+            categories.slice(0, 2).forEach(category => {
+                badgesHTML += `<span class="badge inline-block px-2 py-1 text-xs font-medium bg-primary bg-opacity-10 text-primary dark:bg-dark-primary dark:bg-opacity-20 dark:text-dark-primary rounded mr-2 mb-2">${category}</span>`;
+            });
+            
+            // Get ingredients list
+            const ingredients = recipe.RecipeIngredientParts ? recipe.RecipeIngredientParts.split(', ') : [];
+            
+            card.innerHTML = `
+                <div class="relative h-48 overflow-hidden">
+                    <img src="${recipe.Images}" alt="${recipe.Name}" class="w-full h-full object-cover">
+                    <div class="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black to-transparent p-3">
+                        <div class="flex">
+                            ${starsHTML}
+                            <span class="text-white text-xs ml-2">(${recipe.ReviewCount || 0})</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="p-4">
+                    <h3 class="text-lg font-semibold mb-2 line-clamp-2">${recipe.Name}</h3>
+                    <p class="text-gray-600 dark:text-gray-400 text-sm mb-3 line-clamp-2">${recipe.Description}</p>
+                    <div class="flex items-center text-sm text-gray-500 dark:text-gray-400 mb-3">
+                        <span class="flex items-center mr-3"><i class="far fa-clock mr-1"></i> ${recipe.TotalTime}</span>
+                        <span class="flex items-center"><i class="fas fa-utensils mr-1"></i> ${recipe.RecipeServings || ''} servings</span>
+                    </div>
+                    <div class="mb-3">
+                        ${badgesHTML}
+                    </div>
+                    <div class="text-sm text-gray-600 dark:text-gray-400 mb-3">
+                        <p><span class="font-medium">${ingredients.length}</span> ingredients</p>
+                    </div>
+                    <button class="view-recipe-btn w-full py-2 mt-2 bg-primary dark:bg-dark-primary text-white text-sm font-medium rounded hover:bg-opacity-90 transition-colors" data-recipe-id="${recipe.RecipeId}">
+                        View Recipe
+                    </button>
+                </div>
+            `;
+            
+            // Add event listener to view recipe button
+            card.querySelector('.view-recipe-btn').addEventListener('click', () => {
+                openRecipeModal(recipe);
+            });
+            
+            return card;
+        }
+
+        // Filter recipes based on search input and filters
+        function filterRecipes() {
+            const searchTerm = searchInput.value.toLowerCase();
+            const categoryValue = categoryFilter.value;
+            const dietaryValue = dietaryFilter.value;
+            
+            filteredRecipes = sampleRecipes.filter(recipe => {
+                // Search term filter
+                const matchesSearch = 
+                    recipe.Name.toLowerCase().includes(searchTerm) ||
+                    recipe.Description.toLowerCase().includes(searchTerm) ||
+                    recipe.Keywords.toLowerCase().includes(searchTerm);
+                
+                // Category filter
+                const matchesCategory = 
+                    !categoryValue || 
+                    recipe.RecipeCategory.toLowerCase().includes(categoryValue.toLowerCase());
+                
+                // Dietary filter
+                const matchesDietary = 
+                    !dietaryValue || 
+                    recipe.Keywords.toLowerCase().includes(dietaryValue.toLowerCase());
+                
+                return matchesSearch && matchesCategory && matchesDietary;
+            });
+            
+            loadRecipes(filteredRecipes);
+        }
+
+        // Ingredient autocomplete
+        function setupIngredientAutocomplete() {
+            const suggestionsDiv = document.getElementById('ingredient-suggestions');
+            
+            ingredientInput.addEventListener('input', () => {
+                const value = ingredientInput.value.toLowerCase();
+                
+                if (value.length < 2) {
+                    suggestionsDiv.classList.add('hidden');
+                    return;
+                }
+                
+                const matchingSuggestions = ingredientSuggestions.filter(
+                    suggestion => suggestion.toLowerCase().includes(value)
+                ).slice(0, 8); // Show max 8 suggestions
+                
+                if (matchingSuggestions.length > 0) {
+                    suggestionsDiv.innerHTML = '';
+                    matchingSuggestions.forEach(suggestion => {
+                        const suggestionEl = document.createElement('div');
+                        suggestionEl.className = 'px-3 py-2 cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 rounded';
+                        suggestionEl.textContent = suggestion;
+                        
+                        suggestionEl.addEventListener('click', () => {
+                            ingredientInput.value = suggestion;
+                            suggestionsDiv.classList.add('hidden');
+                            addIngredient();
+                        });
+                        
+                        suggestionsDiv.appendChild(suggestionEl);
+                    });
+                    suggestionsDiv.classList.remove('hidden');
+                } else {
+                    suggestionsDiv.classList.add('hidden');
+                }
+            });
+            
+            // Hide suggestions when clicking outside
+            document.addEventListener('click', (e) => {
+                if (!ingredientInput.contains(e.target) && !suggestionsDiv.contains(e.target)) {
+                    suggestionsDiv.classList.add('hidden');
+                }
+            });
+        }
+
+        // Add an ingredient to the selected list
+        function addIngredient() {
+            const ingredient = ingredientInput.value.trim();
+            
+            if (ingredient && !currentIngredients.includes(ingredient)) {
+                currentIngredients.push(ingredient);
+                
+                const tagElement = document.createElement('div');
+                tagElement.className = 'ingredient-tag bg-primary dark:bg-dark-primary bg-opacity-10 dark:bg-opacity-20 px-3 py-1 rounded-full text-primary dark:text-dark-primary text-sm flex items-center';
+                tagElement.innerHTML = `
+                    <span>${ingredient}</span>
+                    <button class="ml-2 text-primary dark:text-dark-primary hover:text-opacity-70 focus:outline-none" data-ingredient="${ingredient}">
+                        <i class="fas fa-times"></i>
+                    </button>
+                `;
+                
+                // Add event listener to remove button
+                tagElement.querySelector('button').addEventListener('click', function() {
+                    removeIngredient(this.getAttribute('data-ingredient'), tagElement);
+                });
+                
+                selectedIngredients.appendChild(tagElement);
+                
+                // Hide "no ingredients" message
+                noIngredientsMsg.classList.add('hidden');
+                
+                // Enable buttons
+                clearIngredientsBtn.disabled = false;
+                findRecipesBtn.disabled = false;
+                
+                // Clear input
+                ingredientInput.value = '';
+                ingredientInput.focus();
+            }
+        }
+
+        // Remove an ingredient from the selected list
+        function removeIngredient(ingredient, element) {
+            currentIngredients = currentIngredients.filter(item => item !== ingredient);
+            element.remove();
+            
+            // If no ingredients, show message and disable buttons
+            if (currentIngredients.length === 0) {
+                noIngredientsMsg.classList.remove('hidden');
+                clearIngredientsBtn.disabled = true;
+                findRecipesBtn.disabled = true;
+            }
+        }
+
+        // Clear all selected ingredients
+        function clearIngredients() {
+            currentIngredients = [];
+            
+            // Remove all ingredient tags
+            selectedIngredients.querySelectorAll('.ingredient-tag').forEach(el => el.remove());
+            
+            // Show "no ingredients" message
+            noIngredientsMsg.classList.remove('hidden');
+            
+            // Disable buttons
+            clearIngredientsBtn.disabled = true;
+            findRecipesBtn.disabled = true;
+        }
+
+        // Find recipes based on the selected ingredients
+        function findRecipesByIngredients() {
+            if (currentIngredients.length === 0) return;
+            
+            // Find recipes that contain ALL of the selected ingredients
+            // and ONLY those ingredients (plus salt, pepper, water)
+            const commonStaples = ['salt', 'black pepper', 'water'];
+            
+            const matchingRecipes = sampleRecipes.filter(recipe => {
+                const recipeIngredients = recipe.RecipeIngredientParts.toLowerCase().split(', ');
+                
+                // Check if all selected ingredients are in the recipe
+                const allIngredientsPresent = currentIngredients.every(ingredient => {
+                    return recipeIngredients.some(recipeIngredient => 
+                        recipeIngredient.includes(ingredient.toLowerCase())
+                    );
+                });
+                
+                // Check if recipe has ingredients that aren't in our selected list or common staples
+                const hasExtraIngredients = recipeIngredients.some(recipeIngredient => {
+                    return !currentIngredients.some(ingredient => 
+                        recipeIngredient.includes(ingredient.toLowerCase())
+                    ) && !commonStaples.some(staple => 
+                        recipeIngredient.includes(staple)
+                    );
+                });
+                
+                return allIngredientsPresent && !hasExtraIngredients;
+            });
+            
+            // Show the results
+            ingredientMatchesGrid.innerHTML = '';
+            
+            if (matchingRecipes.length === 0) {
+                noMatchesMessage.classList.remove('hidden');
+            } else {
+                noMatchesMessage.classList.add('hidden');
+                
+                matchingRecipes.forEach(recipe => {
+                    const card = createRecipeCard(recipe);
+                    ingredientMatchesGrid.appendChild(card);
+                });
+            }
+            
+            ingredientResults.classList.remove('hidden');
+            ingredientResults.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // Open the recipe detail modal
+        function openRecipeModal(recipe) {
+            modalTitle.textContent = recipe.Name;
+            
+            // Parse ingredients
+            const ingredientQuantities = recipe.RecipeIngredientQuantities ? recipe.RecipeIngredientQuantities.split(', ') : [];
+            const ingredientParts = recipe.RecipeIngredientParts ? recipe.RecipeIngredientParts.split(', ') : [];
+            
+            // Create ingredients list
+            let ingredientsHTML = '<ul class="list-disc pl-5 space-y-1">';
+            for (let i = 0; i < Math.min(ingredientQuantities.length, ingredientParts.length); i++) {
+                ingredientsHTML += `<li>${ingredientQuantities[i]} ${ingredientParts[i]}</li>`;
+            }
+            ingredientsHTML += '</ul>';
+            
+            // Format instructions
+            const instructions = recipe.RecipeInstructions
+                .split('\n')
+                .filter(step => step.trim().length > 0)
+                .map(step => `<li class="mb-3">${step}</li>`)
+                .join('');
+            
+            // Calculate nutritional info (if available)
+            let nutritionHTML = '';
+            if (recipe.Calories) {
+                nutritionHTML = `
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold mb-3">Nutrition Information</h3>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 text-sm">
+                        <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded">
+                            <p class="font-medium">Calories</p>
+                            <p>${recipe.Calories || 'N/A'}</p>
+                        </div>
+                        ${recipe.ProteinContent ? `
+                        <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded">
+                            <p class="font-medium">Protein</p>
+                            <p>${recipe.ProteinContent}</p>
+                        </div>
+                        ` : ''}
+                        ${recipe.FatContent ? `
+                        <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded">
+                            <p class="font-medium">Fat</p>
+                            <p>${recipe.FatContent}</p>
+                        </div>
+                        ` : ''}
+                        ${recipe.CarbohydrateContent ? `
+                        <div class="bg-gray-100 dark:bg-gray-700 p-3 rounded">
+                            <p class="font-medium">Carbs</p>
+                            <p>${recipe.CarbohydrateContent}</p>
+                        </div>
+                        ` : ''}
+                    </div>
+                </div>`;
+            }
+            
+            // Create recipe content
+            modalContent.innerHTML = `
+                <div>
+                    <img src="${recipe.Images}" alt="${recipe.Name}" class="w-full h-64 object-cover rounded-lg">
+                </div>
+                
+                <div class="flex items-center text-sm text-gray-600 dark:text-gray-400 mt-2">
+                    <span class="flex items-center mr-4"><i class="fas fa-user mr-1"></i> ${recipe.AuthorName}</span>
+                    <span class="flex items-center mr-4"><i class="far fa-clock mr-1"></i> ${recipe.TotalTime}</span>
+                    <span class="flex items-center"><i class="fas fa-utensils mr-1"></i> ${recipe.RecipeServings || ''} servings</span>
+                </div>
+                
+                <div class="mt-4">
+                    <p class="text-gray-700 dark:text-gray-300">${recipe.Description}</p>
+                </div>
+                
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold mb-3">Ingredients</h3>
+                    ${ingredientsHTML}
+                </div>
+                
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold mb-3">Instructions</h3>
+                    <ol class="list-decimal pl-5">
+                        ${instructions}
+                    </ol>
+                </div>
+                
+                ${nutritionHTML}
+            `;
+            
+            recipeModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden'; // Prevent background scrolling
+        }
+
+        // Close the recipe detail modal
+        function closeRecipeModal() {
+            recipeModal.classList.add('hidden');
+            document.body.style.overflow = ''; // Restore scrolling
+        }
+
+        // Initialize the app when the document is loaded
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
+</body>
+</html>

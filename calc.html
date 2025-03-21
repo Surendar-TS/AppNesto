@@ -1,0 +1,1823 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        primaryDark: '#4a49b7',
+                        secondary: '#9795f0',
+                        dark: {
+                            100: '#333333',
+                            200: '#2d2d2d',
+                            300: '#252525',
+                            400: '#1e1e1e',
+                            500: '#181818'
+                        }
+                    },
+                    transitionProperty: {
+                        'height': 'height',
+                    },
+                    keyframes: {
+                        fadeIn: {
+                            '0%': { opacity: '0' },
+                            '100%': { opacity: '1' },
+                        }
+                    },
+                    animation: {
+                        fadeIn: 'fadeIn 0.3s ease-in-out',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            transition: background-color 0.3s ease;
+        }
+
+        .calculator-btn {
+            transition: all 0.1s ease;
+        }
+        
+        .calculator-btn:active {
+            transform: scale(0.95);
+        }
+
+        .tab-content {
+            display: none;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 10px;
+        }
+        
+        .dark ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+        }
+        
+        .dark ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.2);
+        }
+
+        .calculator-container {
+            height: calc(100vh - 4rem);
+        }
+
+        /* Prevent zoom on mobile when using inputs */
+        input, select, textarea {
+            font-size: 16px !important;
+        }
+
+        /* Calculator display styling */
+        .calc-display {
+            min-height: 60px;
+            font-family: 'Courier New', monospace;
+        }
+
+        /* Calculator keypad spacing */
+        .calc-pad {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+        }
+
+        .scientific-pad {
+            grid-template-columns: repeat(5, 1fr);
+        }
+
+        /* Financial calculator form styles */
+        .finance-input {
+            border-radius: 8px;
+            transition: all 0.2s ease;
+        }
+
+        .finance-input:focus {
+            box-shadow: 0 0 0 2px rgba(93, 92, 222, 0.3);
+        }
+    </style>
+</head>
+<body class="bg-white dark:bg-dark-500 text-gray-800 dark:text-gray-200">
+    <div class="flex flex-col h-screen">
+        <!-- Header -->
+        <header class="bg-white dark:bg-dark-400 shadow-sm h-16 flex items-center justify-between px-4 z-10">
+            <div class="flex items-center gap-3">
+                <button id="menu-toggle" class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-dark-300 md:hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                </button>
+                <h1 class="text-xl font-semibold">Ultimate Calculator</h1>
+            </div>
+            <div class="flex items-center gap-3">
+                <button id="theme-toggle" class="p-2 rounded-md hover:bg-gray-100 dark:hover:bg-dark-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 hidden dark:block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                </button>
+            </div>
+        </header>
+        
+        <div class="flex flex-1 overflow-hidden">
+            <!-- Sidebar navigation -->
+            <aside id="sidebar" class="w-64 bg-gray-50 dark:bg-dark-400 border-r border-gray-200 dark:border-dark-300 overflow-y-auto hidden md:block transition-all duration-300">
+                <nav class="p-4">
+                    <div class="mb-4">
+                        <h2 class="text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold mb-2">Math Calculators</h2>
+                        <ul class="space-y-1">
+                            <li>
+                                <button data-category="math" data-tab="basic" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors active-calculator">
+                                    Basic Calculator
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="math" data-tab="scientific" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    Scientific Calculator
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="math" data-tab="percentage" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    Percentage Calculator
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <h2 class="text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold mb-2">Financial Calculators</h2>
+                        <ul class="space-y-1">
+                            <li>
+                                <button data-category="financial" data-tab="compound" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    Compound Interest
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="financial" data-tab="fd" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    Fixed Deposit (FD)
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="financial" data-tab="sip" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    SIP Calculator
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="financial" data-tab="sipstep" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    SIP Step-up
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="financial" data-tab="lumpsum" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    Lumpsum Investment
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="financial" data-tab="loan" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    Loan/EMI Calculator
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="financial" data-tab="rd" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    Recurring Deposit (RD)
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="financial" data-tab="swp" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    SWP Calculator
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="financial" data-tab="inflation" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    Inflation Calculator
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div>
+                        <h2 class="text-sm uppercase tracking-wider text-gray-500 dark:text-gray-400 font-semibold mb-2">Other Calculators</h2>
+                        <ul class="space-y-1">
+                            <li>
+                                <button data-category="other" data-tab="date" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    Date Calculator
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="other" data-tab="age" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    Age Calculator
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="other" data-tab="time" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    Time Calculator
+                                </button>
+                            </li>
+                            <li>
+                                <button data-category="other" data-tab="gpa" class="calculator-nav w-full text-left px-4 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-dark-300 font-medium transition-colors">
+                                    GPA Calculator
+                                </button>
+                            </li>
+                        </ul>
+                    </div>
+                </nav>
+            </aside>
+            
+            <!-- Main content area -->
+            <main class="flex-1 overflow-y-auto p-4 md:p-6">
+                <!-- Math Calculators -->
+                <div id="math-calculators" class="calculator-category active">
+                    <!-- Basic Calculator -->
+                    <div id="basic-calculator" class="tab-content active">
+                        <h2 class="text-2xl font-semibold mb-4">Basic Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-4 max-w-md mx-auto">
+                            <div class="calc-display bg-gray-100 dark:bg-dark-300 rounded-lg p-4 text-right mb-4 overflow-x-auto whitespace-nowrap">
+                                <div id="basic-expression" class="text-gray-600 dark:text-gray-400 text-sm h-6"></div>
+                                <div id="basic-result" class="text-2xl">0</div>
+                            </div>
+                            <div class="calc-pad">
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="clearCalculator('basic')">C</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="deleteChar('basic')">⌫</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '%')">%</button>
+                                <button class="calculator-btn bg-primary text-white text-lg font-medium h-14 rounded-md hover:bg-primaryDark" onclick="appendToCalculator('basic', '÷')">÷</button>
+                                
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '7')">7</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '8')">8</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '9')">9</button>
+                                <button class="calculator-btn bg-primary text-white text-lg font-medium h-14 rounded-md hover:bg-primaryDark" onclick="appendToCalculator('basic', '×')">×</button>
+                                
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '4')">4</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '5')">5</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '6')">6</button>
+                                <button class="calculator-btn bg-primary text-white text-lg font-medium h-14 rounded-md hover:bg-primaryDark" onclick="appendToCalculator('basic', '-')">−</button>
+                                
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '1')">1</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '2')">2</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '3')">3</button>
+                                <button class="calculator-btn bg-primary text-white text-lg font-medium h-14 rounded-md hover:bg-primaryDark" onclick="appendToCalculator('basic', '+')">+</button>
+                                
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '0')">0</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '00')">00</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-14 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('basic', '.')">.</button>
+                                <button class="calculator-btn bg-primary text-white text-lg font-medium h-14 rounded-md hover:bg-primaryDark" onclick="calculateResult('basic')">=</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Scientific Calculator -->
+                    <div id="scientific-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Scientific Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-4 max-w-xl mx-auto">
+                            <div class="calc-display bg-gray-100 dark:bg-dark-300 rounded-lg p-4 text-right mb-4 overflow-x-auto whitespace-nowrap">
+                                <div id="scientific-expression" class="text-gray-600 dark:text-gray-400 text-sm h-6"></div>
+                                <div id="scientific-result" class="text-2xl">0</div>
+                            </div>
+                            <div class="calc-pad scientific-pad">
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', 'sin(')">sin</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', 'cos(')">cos</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', 'tan(')">tan</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', 'log(')">log</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', 'ln(')">ln</button>
+                                
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', 'π')">π</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', 'e')">e</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '^')">^</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '√(')">√</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '!')"">!</button>
+                                
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="clearCalculator('scientific')">C</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="deleteChar('scientific')">⌫</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '%')">%</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '(')">(</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', ')')">)</button>
+                                
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '7')">7</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '8')">8</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '9')">9</button>
+                                <button class="calculator-btn bg-primary text-white text-lg font-medium h-12 rounded-md hover:bg-primaryDark" onclick="appendToCalculator('scientific', '÷')">÷</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-sm font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="toggleDegRad()">DEG</button>
+                                
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '4')">4</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '5')">5</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '6')">6</button>
+                                <button class="calculator-btn bg-primary text-white text-lg font-medium h-12 rounded-md hover:bg-primaryDark" onclick="appendToCalculator('scientific', '×')">×</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-sm font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="setAnswer('scientific')">ANS</button>
+                                
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '1')">1</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '2')">2</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '3')">3</button>
+                                <button class="calculator-btn bg-primary text-white text-lg font-medium h-12 rounded-md hover:bg-primaryDark" onclick="appendToCalculator('scientific', '-')">−</button>
+                                <button class="calculator-btn bg-gray-200 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', 'EE')">EE</button>
+                                
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '0')">0</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="appendToCalculator('scientific', '.')">.</button>
+                                <button class="calculator-btn bg-gray-100 dark:bg-dark-300 text-lg font-medium h-12 rounded-md hover:bg-gray-200 dark:hover:bg-dark-200" onclick="changeSign('scientific')">±</button>
+                                <button class="calculator-btn bg-primary text-white text-lg font-medium h-12 rounded-md hover:bg-primaryDark" onclick="appendToCalculator('scientific', '+')">+</button>
+                                <button class="calculator-btn bg-primary text-white text-lg font-medium h-12 rounded-md hover:bg-primaryDark" onclick="calculateResult('scientific')">=</button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Percentage Calculator -->
+                    <div id="percentage-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Percentage Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-6">
+                                <div>
+                                    <h3 class="text-lg font-medium mb-3">Find percentage of a number</h3>
+                                    <div class="flex items-center space-x-2 mb-4">
+                                        <input type="number" id="percentage1" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-20 text-center" value="10">
+                                        <span>% of</span>
+                                        <input type="number" id="value1" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-32 text-center" value="100">
+                                        <span>=</span>
+                                        <div id="result1" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-32 text-center">10</div>
+                                    </div>
+                                    <button onclick="calculatePercentageOf()" class="calculator-btn bg-primary text-white py-2 px-4 rounded-md hover:bg-primaryDark w-full">Calculate</button>
+                                </div>
+                                
+                                <hr class="border-gray-200 dark:border-dark-300">
+                                
+                                <div>
+                                    <h3 class="text-lg font-medium mb-3">Find percentage increase/decrease</h3>
+                                    <div class="flex flex-col space-y-3 mb-4">
+                                        <div class="flex items-center space-x-2">
+                                            <span>From</span>
+                                            <input type="number" id="fromValue" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-28 text-center" value="100">
+                                            <span>to</span>
+                                            <input type="number" id="toValue" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-28 text-center" value="120">
+                                        </div>
+                                        <div id="percentageChange" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 text-center">
+                                            20% increase
+                                        </div>
+                                    </div>
+                                    <button onclick="calculatePercentageChange()" class="calculator-btn bg-primary text-white py-2 px-4 rounded-md hover:bg-primaryDark w-full">Calculate</button>
+                                </div>
+                                
+                                <hr class="border-gray-200 dark:border-dark-300">
+                                
+                                <div>
+                                    <h3 class="text-lg font-medium mb-3">Find number before/after percentage</h3>
+                                    <div class="flex flex-col space-y-3 mb-4">
+                                        <div class="flex items-center space-x-2">
+                                            <input type="number" id="finalValue" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-32 text-center" value="120">
+                                            <span>is</span>
+                                            <input type="number" id="percentageValue" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-20 text-center" value="20">
+                                            <span>%</span>
+                                            <select id="percentageType" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-24">
+                                                <option value="more">more than</option>
+                                                <option value="less">less than</option>
+                                            </select>
+                                        </div>
+                                        <div id="originalValue" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 text-center">
+                                            100
+                                        </div>
+                                    </div>
+                                    <button onclick="calculateOriginalValue()" class="calculator-btn bg-primary text-white py-2 px-4 rounded-md hover:bg-primaryDark w-full">Calculate</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Financial Calculators -->
+                <div id="financial-calculators" class="calculator-category hidden">
+                    <!-- Compound Interest -->
+                    <div id="compound-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Compound Interest Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="principalAmount" class="block text-sm font-medium mb-1">Principal Amount</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400">$</span>
+                                        <input type="number" id="principalAmount" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pl-8 w-full" value="10000">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="interestRate" class="block text-sm font-medium mb-1">Annual Interest Rate</label>
+                                    <div class="relative">
+                                        <input type="number" id="interestRate" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-8 w-full" value="5">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="compoundFrequency" class="block text-sm font-medium mb-1">Compound Frequency</label>
+                                    <select id="compoundFrequency" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                        <option value="1">Annually</option>
+                                        <option value="2">Semi-Annually</option>
+                                        <option value="4">Quarterly</option>
+                                        <option value="12" selected>Monthly</option>
+                                        <option value="365">Daily</option>
+                                    </select>
+                                </div>
+                                
+                                <div>
+                                    <label for="timeYears" class="block text-sm font-medium mb-1">Time Period</label>
+                                    <div class="relative">
+                                        <input type="number" id="timeYears" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-12 w-full" value="5">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">years</span>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="calculateCompoundInterest()" class="calculator-btn bg-primary text-white py-3 px-4 rounded-md hover:bg-primaryDark w-full mt-2">Calculate</button>
+                                
+                                <div class="bg-gray-100 dark:bg-dark-300 rounded-lg p-4 mt-4">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Final Amount:</span>
+                                        <span id="finalAmount" class="font-bold">$12,833.59</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Total Interest:</span>
+                                        <span id="totalInterest" class="font-medium text-green-600 dark:text-green-400">$2,833.59</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Fixed Deposit Calculator -->
+                    <div id="fd-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Fixed Deposit (FD) Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="fdPrincipal" class="block text-sm font-medium mb-1">Principal Amount</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400">$</span>
+                                        <input type="number" id="fdPrincipal" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pl-8 w-full" value="100000">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="fdRate" class="block text-sm font-medium mb-1">Interest Rate</label>
+                                    <div class="relative">
+                                        <input type="number" id="fdRate" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-8 w-full" value="6.5">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="fdTenure" class="block text-sm font-medium mb-1">Tenure</label>
+                                    <div class="flex space-x-2">
+                                        <input type="number" id="fdTenure" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full" value="3">
+                                        <select id="fdTenureType" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3">
+                                            <option value="years">Years</option>
+                                            <option value="months">Months</option>
+                                            <option value="days">Days</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="fdPayout" class="block text-sm font-medium mb-1">Interest Payout</label>
+                                    <select id="fdPayout" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                        <option value="maturity">On Maturity</option>
+                                        <option value="monthly">Monthly</option>
+                                        <option value="quarterly">Quarterly</option>
+                                        <option value="halfYearly">Half Yearly</option>
+                                        <option value="yearly">Yearly</option>
+                                    </select>
+                                </div>
+                                
+                                <button onclick="calculateFixedDeposit()" class="calculator-btn bg-primary text-white py-3 px-4 rounded-md hover:bg-primaryDark w-full mt-2">Calculate</button>
+                                
+                                <div class="bg-gray-100 dark:bg-dark-300 rounded-lg p-4 mt-4">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Maturity Amount:</span>
+                                        <span id="fdMaturityAmount" class="font-bold">$120,973.35</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Total Interest:</span>
+                                        <span id="fdInterestEarned" class="font-medium text-green-600 dark:text-green-400">$20,973.35</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SIP Calculator -->
+                    <div id="sip-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">SIP Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="sipAmount" class="block text-sm font-medium mb-1">Monthly Investment</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400">$</span>
+                                        <input type="number" id="sipAmount" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pl-8 w-full" value="5000">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="sipReturn" class="block text-sm font-medium mb-1">Expected Return Rate</label>
+                                    <div class="relative">
+                                        <input type="number" id="sipReturn" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-8 w-full" value="12">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="sipTime" class="block text-sm font-medium mb-1">Time Period</label>
+                                    <div class="relative">
+                                        <input type="number" id="sipTime" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-12 w-full" value="10">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">years</span>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="calculateSIP()" class="calculator-btn bg-primary text-white py-3 px-4 rounded-md hover:bg-primaryDark w-full mt-2">Calculate</button>
+                                
+                                <div class="bg-gray-100 dark:bg-dark-300 rounded-lg p-4 mt-4">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Invested Amount:</span>
+                                        <span id="sipInvestedAmount" class="font-bold">$600,000</span>
+                                    </div>
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Estimated Returns:</span>
+                                        <span id="sipEstimatedReturns" class="font-medium text-green-600 dark:text-green-400">$514,561</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Total Value:</span>
+                                        <span id="sipTotalValue" class="font-bold">$1,114,561</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- SIP Step-up Calculator -->
+                    <div id="sipstep-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">SIP Step-up Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="stepSipAmount" class="block text-sm font-medium mb-1">Monthly Investment</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400">$</span>
+                                        <input type="number" id="stepSipAmount" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pl-8 w-full" value="5000">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="stepupRate" class="block text-sm font-medium mb-1">Annual Step-up Rate</label>
+                                    <div class="relative">
+                                        <input type="number" id="stepupRate" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-8 w-full" value="10">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="stepSipReturn" class="block text-sm font-medium mb-1">Expected Return Rate</label>
+                                    <div class="relative">
+                                        <input type="number" id="stepSipReturn" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-8 w-full" value="12">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="stepSipTime" class="block text-sm font-medium mb-1">Time Period</label>
+                                    <div class="relative">
+                                        <input type="number" id="stepSipTime" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-12 w-full" value="10">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">years</span>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="calculateStepUpSIP()" class="calculator-btn bg-primary text-white py-3 px-4 rounded-md hover:bg-primaryDark w-full mt-2">Calculate</button>
+                                
+                                <div class="bg-gray-100 dark:bg-dark-300 rounded-lg p-4 mt-4">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Invested Amount:</span>
+                                        <span id="stepSipInvestedAmount" class="font-bold">$957,000</span>
+                                    </div>
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Estimated Returns:</span>
+                                        <span id="stepSipEstimatedReturns" class="font-medium text-green-600 dark:text-green-400">$778,296</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Total Value:</span>
+                                        <span id="stepSipTotalValue" class="font-bold">$1,735,296</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Lumpsum Calculator -->
+                    <div id="lumpsum-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Lumpsum Investment Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="lumpsumAmount" class="block text-sm font-medium mb-1">Investment Amount</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400">$</span>
+                                        <input type="number" id="lumpsumAmount" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pl-8 w-full" value="100000">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="lumpsumReturn" class="block text-sm font-medium mb-1">Expected Return Rate</label>
+                                    <div class="relative">
+                                        <input type="number" id="lumpsumReturn" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-8 w-full" value="12">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="lumpsumTime" class="block text-sm font-medium mb-1">Time Period</label>
+                                    <div class="relative">
+                                        <input type="number" id="lumpsumTime" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-12 w-full" value="10">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">years</span>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="calculateLumpsum()" class="calculator-btn bg-primary text-white py-3 px-4 rounded-md hover:bg-primaryDark w-full mt-2">Calculate</button>
+                                
+                                <div class="bg-gray-100 dark:bg-dark-300 rounded-lg p-4 mt-4">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Invested Amount:</span>
+                                        <span id="lumpsumInvestedAmount" class="font-bold">$100,000</span>
+                                    </div>
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Estimated Returns:</span>
+                                        <span id="lumpsumEstimatedReturns" class="font-medium text-green-600 dark:text-green-400">$210,585</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Total Value:</span>
+                                        <span id="lumpsumTotalValue" class="font-bold">$310,585</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Loan/EMI Calculator -->
+                    <div id="loan-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Loan/EMI Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="loanAmount" class="block text-sm font-medium mb-1">Loan Amount</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400">$</span>
+                                        <input type="number" id="loanAmount" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pl-8 w-full" value="300000">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="loanInterest" class="block text-sm font-medium mb-1">Interest Rate</label>
+                                    <div class="relative">
+                                        <input type="number" id="loanInterest" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-8 w-full" value="7.5">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="loanTenure" class="block text-sm font-medium mb-1">Loan Tenure</label>
+                                    <div class="flex space-x-2">
+                                        <input type="number" id="loanTenure" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full" value="20">
+                                        <select id="loanTenureType" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3">
+                                            <option value="years" selected>Years</option>
+                                            <option value="months">Months</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="calculateLoanEMI()" class="calculator-btn bg-primary text-white py-3 px-4 rounded-md hover:bg-primaryDark w-full mt-2">Calculate</button>
+                                
+                                <div class="bg-gray-100 dark:bg-dark-300 rounded-lg p-4 mt-4">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Monthly EMI:</span>
+                                        <span id="monthlyEMI" class="font-bold">$2,411.28</span>
+                                    </div>
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Total Interest:</span>
+                                        <span id="totalInterestPayable" class="font-medium text-red-600 dark:text-red-400">$278,708.29</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Total Payment:</span>
+                                        <span id="totalPayment" class="font-bold">$578,708.29</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Other financial calculators: RD, SWP, Inflation -->
+                    <div id="rd-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Recurring Deposit (RD) Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="rdMonthlyInvestment" class="block text-sm font-medium mb-1">Monthly Investment</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400">$</span>
+                                        <input type="number" id="rdMonthlyInvestment" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pl-8 w-full" value="5000">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="rdInterestRate" class="block text-sm font-medium mb-1">Interest Rate</label>
+                                    <div class="relative">
+                                        <input type="number" id="rdInterestRate" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-8 w-full" value="5.5">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="rdTenure" class="block text-sm font-medium mb-1">Tenure</label>
+                                    <div class="relative">
+                                        <input type="number" id="rdTenure" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-12 w-full" value="3">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">years</span>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="calculateRD()" class="calculator-btn bg-primary text-white py-3 px-4 rounded-md hover:bg-primaryDark w-full mt-2">Calculate</button>
+                                
+                                <div class="bg-gray-100 dark:bg-dark-300 rounded-lg p-4 mt-4">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Total Investment:</span>
+                                        <span id="rdTotalInvestment" class="font-bold">$180,000</span>
+                                    </div>
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Interest Earned:</span>
+                                        <span id="rdInterestEarned" class="font-medium text-green-600 dark:text-green-400">$14,962</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Maturity Value:</span>
+                                        <span id="rdMaturityValue" class="font-bold">$194,962</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="swp-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Systematic Withdrawal Plan (SWP) Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="swpInvestment" class="block text-sm font-medium mb-1">Total Investment</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400">$</span>
+                                        <input type="number" id="swpInvestment" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pl-8 w-full" value="1000000">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="swpWithdrawal" class="block text-sm font-medium mb-1">Monthly Withdrawal</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400">$</span>
+                                        <input type="number" id="swpWithdrawal" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pl-8 w-full" value="10000">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="swpReturn" class="block text-sm font-medium mb-1">Expected Return Rate</label>
+                                    <div class="relative">
+                                        <input type="number" id="swpReturn" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-8 w-full" value="8">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="swpTime" class="block text-sm font-medium mb-1">Time Period</label>
+                                    <div class="relative">
+                                        <input type="number" id="swpTime" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-12 w-full" value="10">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">years</span>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="calculateSWP()" class="calculator-btn bg-primary text-white py-3 px-4 rounded-md hover:bg-primaryDark w-full mt-2">Calculate</button>
+                                
+                                <div class="bg-gray-100 dark:bg-dark-300 rounded-lg p-4 mt-4">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Total Withdrawal:</span>
+                                        <span id="swpTotalWithdrawal" class="font-bold">$1,200,000</span>
+                                    </div>
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Capital Appreciation:</span>
+                                        <span id="swpCapitalGrowth" class="font-medium text-green-600 dark:text-green-400">$757,138</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Final Balance:</span>
+                                        <span id="swpFinalBalance" class="font-bold">$557,138</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div id="inflation-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Inflation Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="presentValue" class="block text-sm font-medium mb-1">Present Value</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500 dark:text-gray-400">$</span>
+                                        <input type="number" id="presentValue" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pl-8 w-full" value="100000">
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="inflationRate" class="block text-sm font-medium mb-1">Inflation Rate</label>
+                                    <div class="relative">
+                                        <input type="number" id="inflationRate" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-8 w-full" value="3">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">%</span>
+                                    </div>
+                                </div>
+                                
+                                <div>
+                                    <label for="inflationYears" class="block text-sm font-medium mb-1">Number of Years</label>
+                                    <div class="relative">
+                                        <input type="number" id="inflationYears" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 pr-12 w-full" value="20">
+                                        <span class="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 dark:text-gray-400">years</span>
+                                    </div>
+                                </div>
+                                
+                                <button onclick="calculateInflation()" class="calculator-btn bg-primary text-white py-3 px-4 rounded-md hover:bg-primaryDark w-full mt-2">Calculate</button>
+                                
+                                <div class="bg-gray-100 dark:bg-dark-300 rounded-lg p-4 mt-4">
+                                    <div class="flex justify-between mb-2">
+                                        <span class="font-medium">Future Value:</span>
+                                        <span id="futureValue" class="font-bold">$180,611</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Purchasing Power Loss:</span>
+                                        <span id="purchasingPowerLoss" class="font-medium text-red-600 dark:text-red-400">45%</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Other Calculators -->
+                <div id="other-calculators" class="calculator-category hidden">
+                    <!-- Date Calculator -->
+                    <div id="date-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Date Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-6">
+                                <div>
+                                    <h3 class="text-lg font-medium mb-3">Calculate Date Difference</h3>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="startDate" class="block text-sm font-medium mb-1">Start Date</label>
+                                            <input type="date" id="startDate" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                        </div>
+                                        <div>
+                                            <label for="endDate" class="block text-sm font-medium mb-1">End Date</label>
+                                            <input type="date" id="endDate" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                        </div>
+                                        <button onclick="calculateDateDifference()" class="calculator-btn bg-primary text-white py-2 px-4 rounded-md hover:bg-primaryDark w-full">Calculate Difference</button>
+                                        <div id="dateDifferenceResult" class="bg-gray-100 dark:bg-dark-300 p-3 rounded-lg mt-2 hidden"></div>
+                                    </div>
+                                </div>
+                                
+                                <hr class="border-gray-200 dark:border-dark-300">
+                                
+                                <div>
+                                    <h3 class="text-lg font-medium mb-3">Add/Subtract from Date</h3>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="baseDate" class="block text-sm font-medium mb-1">Base Date</label>
+                                            <input type="date" id="baseDate" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <div class="w-1/2">
+                                                <label for="dateOperation" class="block text-sm font-medium mb-1">Operation</label>
+                                                <select id="dateOperation" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                                    <option value="add">Add</option>
+                                                    <option value="subtract">Subtract</option>
+                                                </select>
+                                            </div>
+                                            <div class="w-1/2">
+                                                <label for="dateUnit" class="block text-sm font-medium mb-1">Unit</label>
+                                                <select id="dateUnit" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                                    <option value="days">Days</option>
+                                                    <option value="weeks">Weeks</option>
+                                                    <option value="months">Months</option>
+                                                    <option value="years">Years</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label for="dateValue" class="block text-sm font-medium mb-1">Value</label>
+                                            <input type="number" id="dateValue" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full" value="7">
+                                        </div>
+                                        <button onclick="calculateDateOperation()" class="calculator-btn bg-primary text-white py-2 px-4 rounded-md hover:bg-primaryDark w-full">Calculate</button>
+                                        <div id="dateOperationResult" class="bg-gray-100 dark:bg-dark-300 p-3 rounded-lg mt-2 hidden"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Age Calculator -->
+                    <div id="age-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Age Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="birthDate" class="block text-sm font-medium mb-1">Date of Birth</label>
+                                    <input type="date" id="birthDate" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                </div>
+                                
+                                <div>
+                                    <label for="ageAtDate" class="block text-sm font-medium mb-1">Age at Date (Optional)</label>
+                                    <input type="date" id="ageAtDate" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                </div>
+                                
+                                <button onclick="calculateAge()" class="calculator-btn bg-primary text-white py-3 px-4 rounded-md hover:bg-primaryDark w-full mt-2">Calculate Age</button>
+                                
+                                <div id="ageResult" class="bg-gray-100 dark:bg-dark-300 rounded-lg p-4 mt-4 hidden">
+                                    <div class="space-y-2">
+                                        <div class="flex justify-between">
+                                            <span class="font-medium">Years:</span>
+                                            <span id="ageYears" class="font-bold"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="font-medium">Months:</span>
+                                            <span id="ageMonths" class="font-medium"></span>
+                                        </div>
+                                        <div class="flex justify-between">
+                                            <span class="font-medium">Days:</span>
+                                            <span id="ageDays" class="font-medium"></span>
+                                        </div>
+                                        <div class="pt-2 border-t border-gray-200 dark:border-dark-300 mt-2">
+                                            <span class="font-medium">Total Days:</span>
+                                            <span id="ageTotalDays" class="font-medium"></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Time Calculator -->
+                    <div id="time-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">Time Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-6">
+                                <div>
+                                    <h3 class="text-lg font-medium mb-3">Time Duration Calculator</h3>
+                                    <div class="space-y-4">
+                                        <div class="flex space-x-2">
+                                            <div>
+                                                <label for="startTime" class="block text-sm font-medium mb-1">Start Time</label>
+                                                <input type="time" id="startTime" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3">
+                                            </div>
+                                            <div>
+                                                <label for="endTime" class="block text-sm font-medium mb-1">End Time</label>
+                                                <input type="time" id="endTime" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3">
+                                            </div>
+                                        </div>
+                                        <button onclick="calculateTimeDifference()" class="calculator-btn bg-primary text-white py-2 px-4 rounded-md hover:bg-primaryDark w-full">Calculate Duration</button>
+                                        <div id="timeDifferenceResult" class="bg-gray-100 dark:bg-dark-300 p-3 rounded-lg mt-2 hidden"></div>
+                                    </div>
+                                </div>
+                                
+                                <hr class="border-gray-200 dark:border-dark-300">
+                                
+                                <div>
+                                    <h3 class="text-lg font-medium mb-3">Add/Subtract Time</h3>
+                                    <div class="space-y-4">
+                                        <div>
+                                            <label for="baseTime" class="block text-sm font-medium mb-1">Base Time</label>
+                                            <input type="time" id="baseTime" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                        </div>
+                                        <div class="flex space-x-2">
+                                            <div class="w-1/2">
+                                                <label for="timeOperation" class="block text-sm font-medium mb-1">Operation</label>
+                                                <select id="timeOperation" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                                    <option value="add">Add</option>
+                                                    <option value="subtract">Subtract</option>
+                                                </select>
+                                            </div>
+                                            <div class="w-1/2">
+                                                <label for="timeUnit" class="block text-sm font-medium mb-1">Unit</label>
+                                                <select id="timeUnit" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                                    <option value="minutes">Minutes</option>
+                                                    <option value="hours">Hours</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label for="timeValue" class="block text-sm font-medium mb-1">Value</label>
+                                            <input type="number" id="timeValue" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full" value="30">
+                                        </div>
+                                        <button onclick="calculateTimeOperation()" class="calculator-btn bg-primary text-white py-2 px-4 rounded-md hover:bg-primaryDark w-full">Calculate</button>
+                                        <div id="timeOperationResult" class="bg-gray-100 dark:bg-dark-300 p-3 rounded-lg mt-2 hidden"></div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- GPA Calculator -->
+                    <div id="gpa-calculator" class="tab-content">
+                        <h2 class="text-2xl font-semibold mb-4">GPA Calculator</h2>
+                        <div class="bg-white dark:bg-dark-400 rounded-xl shadow-md p-6 max-w-md mx-auto">
+                            <div class="space-y-4">
+                                <div id="courses-container">
+                                    <div class="course-row flex space-x-2 mb-2">
+                                        <input type="text" placeholder="Course Name" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                        <select class="grade finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-24">
+                                            <option value="4.0">A</option>
+                                            <option value="3.7">A-</option>
+                                            <option value="3.3">B+</option>
+                                            <option value="3.0">B</option>
+                                            <option value="2.7">B-</option>
+                                            <option value="2.3">C+</option>
+                                            <option value="2.0">C</option>
+                                            <option value="1.7">C-</option>
+                                            <option value="1.3">D+</option>
+                                            <option value="1.0">D</option>
+                                            <option value="0.0">F</option>
+                                        </select>
+                                        <input type="number" placeholder="Credits" class="credits finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-20" value="3">
+                                    </div>
+                                    <div class="course-row flex space-x-2 mb-2">
+                                        <input type="text" placeholder="Course Name" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                                        <select class="grade finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-24">
+                                            <option value="4.0">A</option>
+                                            <option value="3.7">A-</option>
+                                            <option value="3.3">B+</option>
+                                            <option value="3.0">B</option>
+                                            <option value="2.7">B-</option>
+                                            <option value="2.3">C+</option>
+                                            <option value="2.0">C</option>
+                                            <option value="1.7">C-</option>
+                                            <option value="1.3">D+</option>
+                                            <option value="1.0">D</option>
+                                            <option value="0.0">F</option>
+                                        </select>
+                                        <input type="number" placeholder="Credits" class="credits finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-20" value="3">
+                                    </div>
+                                </div>
+                                
+                                <div class="flex space-x-2">
+                                    <button onclick="addCourse()" class="calculator-btn bg-gray-200 dark:bg-dark-300 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200 w-1/2">Add Course</button>
+                                    <button onclick="removeCourse()" class="calculator-btn bg-gray-200 dark:bg-dark-300 text-gray-800 dark:text-gray-200 py-2 px-4 rounded-md hover:bg-gray-300 dark:hover:bg-dark-200 w-1/2">Remove Course</button>
+                                </div>
+                                
+                                <button onclick="calculateGPA()" class="calculator-btn bg-primary text-white py-3 px-4 rounded-md hover:bg-primaryDark w-full mt-2">Calculate GPA</button>
+                                
+                                <div class="bg-gray-100 dark:bg-dark-300 rounded-lg p-4 mt-4">
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">GPA:</span>
+                                        <span id="gpaResult" class="font-bold">0.00</span>
+                                    </div>
+                                    <div class="flex justify-between">
+                                        <span class="font-medium">Total Credits:</span>
+                                        <span id="totalCredits" class="font-medium">0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // DOM Elements
+        const themeToggle = document.getElementById('theme-toggle');
+        const menuToggle = document.getElementById('menu-toggle');
+        const sidebar = document.getElementById('sidebar');
+        const calculatorNavs = document.querySelectorAll('.calculator-nav');
+        
+        // Initialize dark mode based on user preference
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        
+        // Theme toggle functionality
+        themeToggle.addEventListener('click', () => {
+            document.documentElement.classList.toggle('dark');
+        });
+        
+        // Mobile menu toggle
+        menuToggle.addEventListener('click', () => {
+            sidebar.classList.toggle('hidden');
+        });
+        
+        // Tab navigation
+        calculatorNavs.forEach(nav => {
+            nav.addEventListener('click', () => {
+                // Hide all calculator categories
+                document.querySelectorAll('.calculator-category').forEach(cat => {
+                    cat.classList.add('hidden');
+                    cat.classList.remove('active');
+                });
+                
+                // Show the relevant category
+                const category = nav.getAttribute('data-category');
+                const targetCategory = document.getElementById(`${category}-calculators`);
+                targetCategory.classList.remove('hidden');
+                targetCategory.classList.add('active');
+                
+                // Hide all tab contents
+                document.querySelectorAll('.tab-content').forEach(tab => {
+                    tab.classList.remove('active');
+                });
+                
+                // Show the relevant tab content
+                const tab = nav.getAttribute('data-tab');
+                const targetTab = document.getElementById(`${tab}-calculator`);
+                targetTab.classList.add('active');
+                
+                // Update active state for nav items
+                calculatorNavs.forEach(n => n.classList.remove('active-calculator'));
+                nav.classList.add('active-calculator');
+                
+                // Close mobile menu after selection (on small screens)
+                if (window.innerWidth < 768) {
+                    sidebar.classList.add('hidden');
+                }
+            });
+        });
+        
+        // Calculator Variables
+        let calculators = {
+            basic: {
+                expression: '',
+                result: '0'
+            },
+            scientific: {
+                expression: '',
+                result: '0',
+                lastAnswer: 0,
+                mode: 'DEG' // DEG or RAD
+            }
+        };
+        
+        // Calculator Functions
+        function appendToCalculator(type, value) {
+            const expressionElem = document.getElementById(`${type}-expression`);
+            const resultElem = document.getElementById(`${type}-result`);
+            
+            // Handle operator overrides
+            if (['+', '-', '×', '÷'].includes(value) && 
+                ['+', '-', '×', '÷'].includes(calculators[type].expression.slice(-1))) {
+                calculators[type].expression = calculators[type].expression.slice(0, -1) + value;
+            } else {
+                calculators[type].expression += value;
+            }
+            
+            expressionElem.textContent = calculators[type].expression;
+            resultElem.scrollLeft = resultElem.scrollWidth;
+        }
+        
+        function clearCalculator(type) {
+            calculators[type].expression = '';
+            calculators[type].result = '0';
+            document.getElementById(`${type}-expression`).textContent = '';
+            document.getElementById(`${type}-result`).textContent = '0';
+        }
+        
+        function deleteChar(type) {
+            calculators[type].expression = calculators[type].expression.slice(0, -1);
+            document.getElementById(`${type}-expression`).textContent = calculators[type].expression;
+        }
+        
+        function changeSign(type) {
+            let expr = calculators[type].expression;
+            // Find the last number in the expression
+            const match = expr.match(/(-?\d*\.?\d+)$/);
+            if (match) {
+                const num = match[0];
+                const pos = expr.lastIndexOf(num);
+                if (num.startsWith('-')) {
+                    expr = expr.substring(0, pos) + num.substring(1);
+                } else {
+                    expr = expr.substring(0, pos) + '-' + num;
+                }
+                calculators[type].expression = expr;
+                document.getElementById(`${type}-expression`).textContent = expr;
+            }
+        }
+        
+        function toggleDegRad() {
+            calculators.scientific.mode = calculators.scientific.mode === 'DEG' ? 'RAD' : 'DEG';
+            const button = document.querySelector('.scientific-pad button:nth-child(25)');
+            button.textContent = calculators.scientific.mode;
+        }
+        
+        function setAnswer(type) {
+            if (calculators[type].lastAnswer !== 0) {
+                calculators[type].expression += calculators[type].lastAnswer;
+                document.getElementById(`${type}-expression`).textContent = calculators[type].expression;
+            }
+        }
+        
+        function calculateResult(type) {
+            let expression = calculators[type].expression;
+            
+            // Replace mathematical symbols with JavaScript operators
+            expression = expression.replace(/×/g, '*').replace(/÷/g, '/').replace(/π/g, 'Math.PI')
+                .replace(/e/g, 'Math.E').replace(/√\(/g, 'Math.sqrt(')
+                .replace(/sin\(/g, calculators.scientific.mode === 'DEG' ? 
+                    'Math.sin((Math.PI/180)*' : 'Math.sin(')
+                .replace(/cos\(/g, calculators.scientific.mode === 'DEG' ? 
+                    'Math.cos((Math.PI/180)*' : 'Math.cos(')
+                .replace(/tan\(/g, calculators.scientific.mode === 'DEG' ? 
+                    'Math.tan((Math.PI/180)*' : 'Math.tan(')
+                .replace(/log\(/g, 'Math.log10(')
+                .replace(/ln\(/g, 'Math.log(')
+                .replace(/\^/g, '**')
+                .replace(/EE/g, '*10**');
+            
+            // Handle factorial
+            expression = expression.replace(/(\d+)!/g, (match, number) => {
+                let result = 1;
+                for (let i = 2; i <= parseInt(number); i++) {
+                    result *= i;
+                }
+                return result;
+            });
+            
+            // Handle percentages
+            expression = expression.replace(/(\d+(\.\d+)?)%/g, (match, number) => {
+                return parseFloat(number) / 100;
+            });
+            
+            try {
+                const result = eval(expression);
+                const formattedResult = Number.isInteger(result) ? 
+                    result.toString() : 
+                    parseFloat(result.toFixed(8)).toString();
+                
+                calculators[type].result = formattedResult;
+                calculators[type].lastAnswer = result;
+                document.getElementById(`${type}-result`).textContent = formattedResult;
+            } catch (error) {
+                calculators[type].result = 'Error';
+                document.getElementById(`${type}-result`).textContent = 'Error';
+            }
+        }
+        
+        // Percentage Calculator Functions
+        function calculatePercentageOf() {
+            const percentage = parseFloat(document.getElementById('percentage1').value);
+            const value = parseFloat(document.getElementById('value1').value);
+            const result = (percentage / 100) * value;
+            document.getElementById('result1').textContent = result;
+        }
+        
+        function calculatePercentageChange() {
+            const fromValue = parseFloat(document.getElementById('fromValue').value);
+            const toValue = parseFloat(document.getElementById('toValue').value);
+            const change = ((toValue - fromValue) / fromValue) * 100;
+            const resultElem = document.getElementById('percentageChange');
+            
+            if (change > 0) {
+                resultElem.textContent = `${Math.abs(change).toFixed(2)}% increase`;
+                resultElem.classList.remove('text-red-600', 'dark:text-red-400');
+                resultElem.classList.add('text-green-600', 'dark:text-green-400');
+            } else if (change < 0) {
+                resultElem.textContent = `${Math.abs(change).toFixed(2)}% decrease`;
+                resultElem.classList.remove('text-green-600', 'dark:text-green-400');
+                resultElem.classList.add('text-red-600', 'dark:text-red-400');
+            } else {
+                resultElem.textContent = `No change`;
+                resultElem.classList.remove('text-green-600', 'dark:text-green-400', 'text-red-600', 'dark:text-red-400');
+            }
+        }
+        
+        function calculateOriginalValue() {
+            const finalValue = parseFloat(document.getElementById('finalValue').value);
+            const percentageValue = parseFloat(document.getElementById('percentageValue').value);
+            const type = document.getElementById('percentageType').value;
+            let originalValue;
+            
+            if (type === 'more') {
+                originalValue = finalValue / (1 + (percentageValue / 100));
+            } else {
+                originalValue = finalValue / (1 - (percentageValue / 100));
+            }
+            
+            document.getElementById('originalValue').textContent = originalValue.toFixed(2);
+        }
+        
+        // Financial Calculator Functions
+        function calculateCompoundInterest() {
+            const principal = parseFloat(document.getElementById('principalAmount').value);
+            const rate = parseFloat(document.getElementById('interestRate').value) / 100;
+            const time = parseFloat(document.getElementById('timeYears').value);
+            const n = parseFloat(document.getElementById('compoundFrequency').value);
+            
+            const amount = principal * Math.pow(1 + (rate / n), n * time);
+            const interest = amount - principal;
+            
+            document.getElementById('finalAmount').textContent = '$' + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('totalInterest').textContent = '$' + interest.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        function calculateFixedDeposit() {
+            const principal = parseFloat(document.getElementById('fdPrincipal').value);
+            const ratePercent = parseFloat(document.getElementById('fdRate').value);
+            const rate = ratePercent / 100;
+            let time = parseFloat(document.getElementById('fdTenure').value);
+            const tenureType = document.getElementById('fdTenureType').value;
+            const payout = document.getElementById('fdPayout').value;
+            
+            // Convert time to years
+            if (tenureType === 'months') {
+                time = time / 12;
+            } else if (tenureType === 'days') {
+                time = time / 365;
+            }
+            
+            let amount;
+            
+            if (payout === 'maturity') {
+                // Compound interest at maturity
+                amount = principal * Math.pow(1 + rate, time);
+            } else {
+                let n;
+                if (payout === 'yearly') n = 1;
+                else if (payout === 'halfYearly') n = 2;
+                else if (payout === 'quarterly') n = 4;
+                else if (payout === 'monthly') n = 12;
+                
+                // Simple interest with periodic payouts
+                amount = principal * (1 + (rate * time));
+            }
+            
+            const interest = amount - principal;
+            
+            document.getElementById('fdMaturityAmount').textContent = '$' + amount.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('fdInterestEarned').textContent = '$' + interest.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        function calculateSIP() {
+            const monthlyInvestment = parseFloat(document.getElementById('sipAmount').value);
+            const ratePercent = parseFloat(document.getElementById('sipReturn').value);
+            const time = parseFloat(document.getElementById('sipTime').value);
+            
+            const monthlyRate = ratePercent / (12 * 100);
+            const months = time * 12;
+            
+            const totalInvestment = monthlyInvestment * months;
+            const futureValue = monthlyInvestment * ((Math.pow(1 + monthlyRate, months) - 1) / monthlyRate) * (1 + monthlyRate);
+            const estimatedReturns = futureValue - totalInvestment;
+            
+            document.getElementById('sipInvestedAmount').textContent = '$' + totalInvestment.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('sipEstimatedReturns').textContent = '$' + estimatedReturns.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('sipTotalValue').textContent = '$' + futureValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        function calculateStepUpSIP() {
+            const initialMonthlyInvestment = parseFloat(document.getElementById('stepSipAmount').value);
+            const stepUpRate = parseFloat(document.getElementById('stepupRate').value) / 100;
+            const ratePercent = parseFloat(document.getElementById('stepSipReturn').value);
+            const years = parseFloat(document.getElementById('stepSipTime').value);
+            
+            const monthlyRate = ratePercent / (12 * 100);
+            
+            let totalInvestment = 0;
+            let futureValue = 0;
+            
+            for (let year = 0; year < years; year++) {
+                const yearlyInvestment = initialMonthlyInvestment * Math.pow(1 + stepUpRate, year);
+                
+                for (let month = 0; month < 12; month++) {
+                    const currentMonth = year * 12 + month;
+                    const remainingMonths = years * 12 - currentMonth;
+                    
+                    totalInvestment += yearlyInvestment;
+                    futureValue += yearlyInvestment * Math.pow(1 + monthlyRate, remainingMonths);
+                }
+            }
+            
+            const estimatedReturns = futureValue - totalInvestment;
+            
+            document.getElementById('stepSipInvestedAmount').textContent = '$' + totalInvestment.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('stepSipEstimatedReturns').textContent = '$' + estimatedReturns.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('stepSipTotalValue').textContent = '$' + futureValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        function calculateLumpsum() {
+            const amount = parseFloat(document.getElementById('lumpsumAmount').value);
+            const ratePercent = parseFloat(document.getElementById('lumpsumReturn').value);
+            const time = parseFloat(document.getElementById('lumpsumTime').value);
+            
+            const rate = ratePercent / 100;
+            const futureValue = amount * Math.pow(1 + rate, time);
+            const estimatedReturns = futureValue - amount;
+            
+            document.getElementById('lumpsumInvestedAmount').textContent = '$' + amount.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('lumpsumEstimatedReturns').textContent = '$' + estimatedReturns.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('lumpsumTotalValue').textContent = '$' + futureValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        function calculateLoanEMI() {
+            const principal = parseFloat(document.getElementById('loanAmount').value);
+            const ratePercent = parseFloat(document.getElementById('loanInterest').value);
+            let time = parseFloat(document.getElementById('loanTenure').value);
+            const tenureType = document.getElementById('loanTenureType').value;
+            
+            // Convert time to months
+            if (tenureType === 'years') {
+                time = time * 12;
+            }
+            
+            const rate = ratePercent / (12 * 100); // Monthly interest rate
+            
+            const emi = principal * rate * Math.pow(1 + rate, time) / (Math.pow(1 + rate, time) - 1);
+            const totalPayment = emi * time;
+            const totalInterest = totalPayment - principal;
+            
+            document.getElementById('monthlyEMI').textContent = '$' + emi.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('totalInterestPayable').textContent = '$' + totalInterest.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('totalPayment').textContent = '$' + totalPayment.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        function calculateRD() {
+            const monthlyInvestment = parseFloat(document.getElementById('rdMonthlyInvestment').value);
+            const ratePercent = parseFloat(document.getElementById('rdInterestRate').value);
+            const years = parseFloat(document.getElementById('rdTenure').value);
+            
+            const months = years * 12;
+            const rate = ratePercent / 100;
+            const quarterlyRate = rate / 4;
+            
+            let totalInvestment = monthlyInvestment * months;
+            let interest = 0;
+            
+            for (let i = 0; i < months; i++) {
+                const monthlyDeposit = monthlyInvestment;
+                const remainingQuarters = Math.floor((months - i - 1) / 3);
+                
+                for (let q = 0; q < remainingQuarters; q++) {
+                    interest += monthlyDeposit * quarterlyRate;
+                }
+            }
+            
+            const maturityValue = totalInvestment + interest;
+            
+            document.getElementById('rdTotalInvestment').textContent = '$' + totalInvestment.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('rdInterestEarned').textContent = '$' + interest.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('rdMaturityValue').textContent = '$' + maturityValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        function calculateSWP() {
+            const initialInvestment = parseFloat(document.getElementById('swpInvestment').value);
+            const monthlyWithdrawal = parseFloat(document.getElementById('swpWithdrawal').value);
+            const ratePercent = parseFloat(document.getElementById('swpReturn').value);
+            const years = parseFloat(document.getElementById('swpTime').value);
+            
+            const months = years * 12;
+            const monthlyRate = ratePercent / (12 * 100);
+            
+            let remainingBalance = initialInvestment;
+            const totalWithdrawal = monthlyWithdrawal * months;
+            
+            for (let i = 0; i < months; i++) {
+                remainingBalance = (remainingBalance - monthlyWithdrawal) * (1 + monthlyRate);
+            }
+            
+            const capitalGrowth = remainingBalance + totalWithdrawal - initialInvestment;
+            
+            document.getElementById('swpTotalWithdrawal').textContent = '$' + totalWithdrawal.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('swpCapitalGrowth').textContent = '$' + capitalGrowth.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('swpFinalBalance').textContent = '$' + remainingBalance.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+        }
+        
+        function calculateInflation() {
+            const presentValue = parseFloat(document.getElementById('presentValue').value);
+            const inflationRate = parseFloat(document.getElementById('inflationRate').value) / 100;
+            const years = parseFloat(document.getElementById('inflationYears').value);
+            
+            const futureValue = presentValue * Math.pow(1 + inflationRate, years);
+            const purchasingPowerLoss = ((presentValue - futureValue) / presentValue) * -100;
+            
+            document.getElementById('futureValue').textContent = '$' + futureValue.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+            document.getElementById('purchasingPowerLoss').textContent = Math.abs(purchasingPowerLoss).toFixed(0) + '%';
+        }
+        
+        // Date, Age, and Time Calculator Functions
+        function calculateDateDifference() {
+            const startDate = new Date(document.getElementById('startDate').value);
+            const endDate = new Date(document.getElementById('endDate').value);
+            
+            if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+                alert('Please enter valid dates');
+                return;
+            }
+            
+            const diffTime = Math.abs(endDate - startDate);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            const diffYears = Math.floor(diffDays / 365);
+            const remainingDays = diffDays % 365;
+            const diffMonths = Math.floor(remainingDays / 30);
+            const finalDays = remainingDays % 30;
+            
+            const resultElem = document.getElementById('dateDifferenceResult');
+            resultElem.innerHTML = `
+                <div class="font-medium">Difference:</div>
+                <div>${diffYears} years, ${diffMonths} months, ${finalDays} days</div>
+                <div class="mt-1">Total: ${diffDays} days</div>
+            `;
+            resultElem.classList.remove('hidden');
+        }
+        
+        function calculateDateOperation() {
+            const baseDate = new Date(document.getElementById('baseDate').value);
+            const operation = document.getElementById('dateOperation').value;
+            const unit = document.getElementById('dateUnit').value;
+            const value = parseInt(document.getElementById('dateValue').value);
+            
+            if (isNaN(baseDate.getTime())) {
+                alert('Please enter a valid date');
+                return;
+            }
+            
+            const resultDate = new Date(baseDate);
+            
+            if (operation === 'add') {
+                if (unit === 'days') resultDate.setDate(resultDate.getDate() + value);
+                else if (unit === 'weeks') resultDate.setDate(resultDate.getDate() + (value * 7));
+                else if (unit === 'months') resultDate.setMonth(resultDate.getMonth() + value);
+                else if (unit === 'years') resultDate.setFullYear(resultDate.getFullYear() + value);
+            } else {
+                if (unit === 'days') resultDate.setDate(resultDate.getDate() - value);
+                else if (unit === 'weeks') resultDate.setDate(resultDate.getDate() - (value * 7));
+                else if (unit === 'months') resultDate.setMonth(resultDate.getMonth() - value);
+                else if (unit === 'years') resultDate.setFullYear(resultDate.getFullYear() - value);
+            }
+            
+            const options = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+            const formattedDate = resultDate.toLocaleDateString(undefined, options);
+            
+            const resultElem = document.getElementById('dateOperationResult');
+            resultElem.innerHTML = `
+                <div class="font-medium">Result Date:</div>
+                <div>${formattedDate}</div>
+            `;
+            resultElem.classList.remove('hidden');
+        }
+        
+        function calculateAge() {
+            const birthDate = new Date(document.getElementById('birthDate').value);
+            let currentDate = new Date(document.getElementById('ageAtDate').value);
+            
+            if (isNaN(birthDate.getTime())) {
+                alert('Please enter a valid birth date');
+                return;
+            }
+            
+            if (isNaN(currentDate.getTime())) {
+                currentDate = new Date(); // Use current date if not specified
+            }
+            
+            if (birthDate > currentDate) {
+                alert('Birth date cannot be in the future');
+                return;
+            }
+            
+            const diffTime = Math.abs(currentDate - birthDate);
+            const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+            
+            const years = Math.floor(diffDays / 365);
+            let remainingDays = diffDays % 365;
+            
+            // Adjust for leap years
+            let leapYearCount = 0;
+            for (let i = birthDate.getFullYear(); i <= currentDate.getFullYear(); i++) {
+                if ((i % 4 === 0 && i % 100 !== 0) || i % 400 === 0) {
+                    leapYearCount++;
+                }
+            }
+            remainingDays -= leapYearCount;
+            
+            const months = Math.floor(remainingDays / 30);
+            const days = remainingDays % 30;
+            
+            document.getElementById('ageYears').textContent = years;
+            document.getElementById('ageMonths').textContent = months;
+            document.getElementById('ageDays').textContent = days;
+            document.getElementById('ageTotalDays').textContent = diffDays;
+            document.getElementById('ageResult').classList.remove('hidden');
+        }
+        
+        function calculateTimeDifference() {
+            const startTime = document.getElementById('startTime').value;
+            const endTime = document.getElementById('endTime').value;
+            
+            if (!startTime || !endTime) {
+                alert('Please enter both start and end times');
+                return;
+            }
+            
+            const [startHours, startMinutes] = startTime.split(':').map(Number);
+            const [endHours, endMinutes] = endTime.split(':').map(Number);
+            
+            let diffMinutes = (endHours * 60 + endMinutes) - (startHours * 60 + startMinutes);
+            
+            // Handle overnight time spans
+            if (diffMinutes < 0) {
+                diffMinutes += 24 * 60;
+            }
+            
+            const hours = Math.floor(diffMinutes / 60);
+            const minutes = diffMinutes % 60;
+            
+            const resultElem = document.getElementById('timeDifferenceResult');
+            resultElem.innerHTML = `
+                <div class="font-medium">Duration:</div>
+                <div>${hours} hours, ${minutes} minutes</div>
+                <div class="mt-1">Total: ${diffMinutes} minutes</div>
+            `;
+            resultElem.classList.remove('hidden');
+        }
+        
+        function calculateTimeOperation() {
+            const baseTime = document.getElementById('baseTime').value;
+            const operation = document.getElementById('timeOperation').value;
+            const unit = document.getElementById('timeUnit').value;
+            const value = parseInt(document.getElementById('timeValue').value);
+            
+            if (!baseTime) {
+                alert('Please enter a base time');
+                return;
+            }
+            
+            const [hours, minutes] = baseTime.split(':').map(Number);
+            let totalMinutes = hours * 60 + minutes;
+            
+            if (operation === 'add') {
+                if (unit === 'minutes') totalMinutes += value;
+                else if (unit === 'hours') totalMinutes += value * 60;
+            } else {
+                if (unit === 'minutes') totalMinutes -= value;
+                else if (unit === 'hours') totalMinutes -= value * 60;
+            }
+            
+            // Handle time wraparound
+            while (totalMinutes < 0) {
+                totalMinutes += 24 * 60;
+            }
+            
+            totalMinutes = totalMinutes % (24 * 60);
+            
+            const resultHours = Math.floor(totalMinutes / 60);
+            const resultMinutes = totalMinutes % 60;
+            
+            const formattedHours = resultHours.toString().padStart(2, '0');
+            const formattedMinutes = resultMinutes.toString().padStart(2, '0');
+            
+            const resultElem = document.getElementById('timeOperationResult');
+            resultElem.innerHTML = `
+                <div class="font-medium">Result Time:</div>
+                <div>${formattedHours}:${formattedMinutes}</div>
+            `;
+            resultElem.classList.remove('hidden');
+        }
+        
+        // GPA Calculator Functions
+        function addCourse() {
+            const container = document.getElementById('courses-container');
+            const courseRow = document.createElement('div');
+            courseRow.className = 'course-row flex space-x-2 mb-2';
+            courseRow.innerHTML = `
+                <input type="text" placeholder="Course Name" class="finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-full">
+                <select class="grade finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-24">
+                    <option value="4.0">A</option>
+                    <option value="3.7">A-</option>
+                    <option value="3.3">B+</option>
+                    <option value="3.0">B</option>
+                    <option value="2.7">B-</option>
+                    <option value="2.3">C+</option>
+                    <option value="2.0">C</option>
+                    <option value="1.7">C-</option>
+                    <option value="1.3">D+</option>
+                    <option value="1.0">D</option>
+                    <option value="0.0">F</option>
+                </select>
+                <input type="number" placeholder="Credits" class="credits finance-input bg-gray-100 dark:bg-dark-300 border-0 p-3 w-20" value="3">
+            `;
+            container.appendChild(courseRow);
+        }
+        
+        function removeCourse() {
+            const container = document.getElementById('courses-container');
+            if (container.children.length > 1) {
+                container.removeChild(container.lastChild);
+            }
+        }
+        
+        function calculateGPA() {
+            const courseRows = document.querySelectorAll('.course-row');
+            let totalCredits = 0;
+            let totalGradePoints = 0;
+            
+            courseRows.forEach(row => {
+                const gradeValue = parseFloat(row.querySelector('.grade').value);
+                const credits = parseFloat(row.querySelector('.credits').value);
+                
+                if (!isNaN(gradeValue) && !isNaN(credits)) {
+                    totalGradePoints += gradeValue * credits;
+                    totalCredits += credits;
+                }
+            });
+            
+            const gpa = totalCredits > 0 ? totalGradePoints / totalCredits : 0;
+            document.getElementById('gpaResult').textContent = gpa.toFixed(2);
+            document.getElementById('totalCredits').textContent = totalCredits;
+        }
+        
+        // Initialize default date inputs with today's date
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().slice(0, 10);
+            
+            // Set date inputs to today where appropriate
+            const dateInputs = ['endDate', 'ageAtDate', 'baseDate'];
+            dateInputs.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) input.value = today;
+            });
+            
+            // Set other dates to reasonable defaults
+            const startDateInput = document.getElementById('startDate');
+            if (startDateInput) {
+                const lastWeek = new Date();
+                lastWeek.setDate(lastWeek.getDate() - 7);
+                startDateInput.value = lastWeek.toISOString().slice(0, 10);
+            }
+            
+            // Set birth date to 25 years ago by default
+            const birthDateInput = document.getElementById('birthDate');
+            if (birthDateInput) {
+                const birthDate = new Date();
+                birthDate.setFullYear(birthDate.getFullYear() - 25);
+                birthDateInput.value = birthDate.toISOString().slice(0, 10);
+            }
+            
+            // Initialize time inputs
+            const timeInputs = ['startTime', 'endTime', 'baseTime'];
+            timeInputs.forEach(id => {
+                const input = document.getElementById(id);
+                if (input) {
+                    const now = new Date();
+                    const hours = now.getHours().toString().padStart(2, '0');
+                    const minutes = now.getMinutes().toString().padStart(2, '0');
+                    input.value = `${hours}:${minutes}`;
+                }
+            });
+            
+            // Calculate default values
+            calculatePercentageOf();
+            calculatePercentageChange();
+            calculateOriginalValue();
+            calculateCompoundInterest();
+        });
+    </script>
+</body>
+</html>
