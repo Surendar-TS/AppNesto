@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>World Clock</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/suncalc@1.9.0/suncalc.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            primary: '#5D5CDE',
+            secondary: '#FF6B6B',
+            accent: '#FFA400',
+          },
+        }
+      }
+    }
+  </script>
+  <style>
+    .clock-face {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+    }
+    
+    .clock-hand {
+      position: absolute;
+      transform-origin: bottom center;
+      bottom: 50%;
+      left: 50%;
+      border-radius: 10px;
+      transform: translateX(-50%);
+      z-index: 10;
+    }
+    
+    .hour-marks li {
+      position: absolute;
+      width: 2px;
+      height: 10px;
+      background: currentColor;
+      left: 50%;
+      top: 50%;
+      transform-origin: center;
+      transform: translate(-50%, -50%) rotate(var(--rotation)) translateY(-110px);
+    }
+    
+    .hour-marks li:nth-child(5n) {
+      background: currentColor;
+      width: 3px;
+      height: 15px;
+    }
+    
+    .hour-numbers li {
+      position: absolute;
+      font-size: 1.2rem;
+      color: currentColor;
+      left: 50%;
+      top: 50%;
+      transform-origin: center;
+      transform: rotate(var(--rotation)) translate(-50%, -50%) translateY(-90px) rotate(calc(-1 * var(--rotation)));
+    }
+    
+    .sun-indicator {
+      position: absolute;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 5;
+    }
+    
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+      50% {
+        opacity: 0.8;
+        transform: scale(1.05);
+      }
+    }
+    
+    .pulse {
+      animation: pulse 2s infinite;
+    }
+    
+    .day-night-arc {
+      position: absolute;
+      bottom: 50%;
+      left: 0;
+      right: 0;
+      height: 50%;
+      border-radius: 150px 150px 0 0;
+      overflow: hidden;
+      opacity: 0.1;
+      z-index: 1;
+    }
+  </style>
+</head>
+<body class="bg-white dark:bg-[#181818] text-gray-900 dark:text-gray-100 min-h-screen transition-colors duration-300">
+  <div class="container mx-auto px-4 py-8 max-w-6xl">
+    <header class="text-center mb-8">
+      <h1 class="text-4xl font-bold text-primary mb-2">World Clock</h1>
+      <p class="text-gray-600 dark:text-gray-400">Track time across the globe with precision</p>
+    </header>
+    
+    <main>
+      <!-- Clock Controls -->
+      <div class="flex flex-wrap justify-center gap-4 mb-8">
+        <div class="relative">
+          <select id="timezoneSelect" class="w-full md:w-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 pr-8 text-base focus:outline-none focus:ring-2 focus:ring-primary">
+            <option value="" disabled selected>Select timezone</option>
+            <!-- Timezones will be populated by JavaScript -->
+          </select>
+        </div>
+        
+        <div class="relative">
+          <select id="clockStyleSelect" class="w-full md:w-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 pr-8 text-base focus:outline-none focus:ring-2 focus:ring-primary">
+            <option value="both">Both Clocks</option>
+            <option value="analog">Analog Only</option>
+            <option value="digital">Digital Only</option>
+          </select>
+        </div>
+        
+        <div class="relative">
+          <select id="hourFormatSelect" class="w-full md:w-auto bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg px-4 py-2 pr-8 text-base focus:outline-none focus:ring-2 focus:ring-primary">
+            <option value="12">12-Hour Format</option>
+            <option value="24">24-Hour Format</option>
+          </select>
+        </div>
+        
+        <button id="addClockBtn" class="bg-primary hover:bg-opacity-90 text-white px-4 py-2 rounded-lg flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd" />
+          </svg>
+          Add Clock
+        </button>
+        
+        <button id="toggleThemeBtn" class="bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 px-4 py-2 rounded-lg flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:block" viewBox="0 0 20 20" fill="currentColor">
+            <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+          </svg>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 block dark:hidden" viewBox="0 0 20 20" fill="currentColor">
+            <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+          </svg>
+          <span class="sr-only">Toggle theme</span>
+        </button>
+      </div>
+      
+      <!-- Main Clock Container -->
+      <div id="clocksContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- Default Clock (user's local time) -->
+        <div id="defaultClock" class="bg-white dark:bg-gray-800 rounded-xl shadow-xl p-6 transition-all duration-300 hover:shadow-2xl">
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="text-xl font-bold">Local Time</h2>
+            <div class="flex gap-2">
+              <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 hidden edit-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+              </button>
+              <button class="p-1 rounded hover:bg-gray-200 dark:hover:bg-gray-700 hidden remove-btn">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd" />
+                </svg>
+              </button>
+            </div>
+          </div>
+          
+          <div class="flex flex-col items-center">
+            <!-- Analog Clock -->
+            <div class="analog-clock mb-4 relative w-60 h-60">
+              <div class="clock-face bg-gray-100 dark:bg-gray-900 border-4 border-primary">
+                <!-- Clock hour marks -->
+                <ul class="hour-marks list-none m-0 p-0 h-full w-full">
+                  <!-- Will be populated by JS -->
+                </ul>
+                
+                <!-- Clock numbers -->
+                <ul class="hour-numbers list-none m-0 p-0 h-full w-full">
+                  <!-- Will be populated by JS -->
+                </ul>
+                
+                <!-- Day/Night indicator -->
+                <div class="day-night-arc bg-gradient-to-t from-primary to-transparent"></div>
+                
+                <!-- Sun and moon indicators -->
+                <div class="sun-indicator bg-accent hidden" id="sunriseIndicator"></div>
+                <div class="sun-indicator bg-secondary hidden" id="sunsetIndicator"></div>
+                
+                <!-- Clock hands -->
+                <div class="clock-hand hour-hand h-16 w-4 bg-gray-800 dark:bg-gray-200"></div>
+                <div class="clock-hand minute-hand h-20 w-3 bg-gray-800 dark:bg-gray-200"></div>
+                <div class="clock-hand second-hand h-24 w-1 bg-primary"></div>
+                
+                <!-- Center dot -->
+                <div class="absolute w-4 h-4 bg-primary rounded-full left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 z-20"></div>
+              </div>
+            </div>
+            
+            <!-- Digital Clock -->
+            <div class="digital-clock text-center">
+              <div class="text-5xl font-bold font-mono mb-2 clock-time">00:00:00</div>
+              <div class="text-sm font-medium text-gray-600 dark:text-gray-400 mb-1 clock-date">Monday, January 1, 2023</div>
+              <div class="text-xs font-medium text-primary clock-timezone">UTC+00:00</div>
+            </div>
+          </div>
+          
+          <!-- Sunrise/Sunset Info -->
+          <div class="mt-6 grid grid-cols-2 gap-4">
+            <div class="bg-gray-100 dark:bg-gray-900 rounded-lg p-3 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-accent" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" />
+                </svg>
+                <span>Sunrise</span>
+              </div>
+              <div class="text-lg font-medium sunrise-time">06:00 AM</div>
+            </div>
+            
+            <div class="bg-gray-100 dark:bg-gray-900 rounded-lg p-3 text-center">
+              <div class="flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-secondary" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                </svg>
+                <span>Sunset</span>
+              </div>
+              <div class="text-lg font-medium sunset-time">06:00 PM</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Time Comparison Section -->
+      <div id="comparisonSection" class="mt-12 hidden">
+        <h2 class="text-2xl font-bold mb-4">Time Comparison</h2>
+        <div class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6">
+          <div class="overflow-x-auto">
+            <table id="comparisonTable" class="w-full border-collapse">
+              <thead>
+                <tr class="border-b border-gray-300 dark:border-gray-700">
+                  <th class="text-left py-2 px-4">Location</th>
+                  <th class="text-left py-2 px-4">Current Time</th>
+                  <th class="text-left py-2 px-4">Difference</th>
+                  <th class="text-left py-2 px-4">Day/Night</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Will be filled by JavaScript -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+    
+    <footer class="mt-12 text-center text-gray-600 dark:text-gray-400 text-sm">
+      <p>Created with ❤️ for Poe Canvas Apps</p>
+    </footer>
+  </div>
+  
+  <script>
+    // Init theme based on user preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.classList.add('dark');
+    }
+    
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+      if (event.matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    });
+    
+    // DOM elements
+    const timezoneSelect = document.getElementById('timezoneSelect');
+    const clockStyleSelect = document.getElementById('clockStyleSelect');
+    const hourFormatSelect = document.getElementById('hourFormatSelect');
+    const addClockBtn = document.getElementById('addClockBtn');
+    const toggleThemeBtn = document.getElementById('toggleThemeBtn');
+    const clocksContainer = document.getElementById('clocksContainer');
+    const comparisonSection = document.getElementById('comparisonSection');
+    const comparisonTable = document.getElementById('comparisonTable');
+    
+    // Global variables
+    let clocks = [];
+    let defaultLatitude = 40.7128; // Default to NYC
+    let defaultLongitude = -74.0060;
+    
+    // Try to get user's location
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          defaultLatitude = position.coords.latitude;
+          defaultLongitude = position.coords.longitude;
+          updateSunriseSunset(document.getElementById('defaultClock'), defaultLatitude, defaultLongitude);
+        },
+        (error) => {
+          console.error("Error getting location:", error);
+        }
+      );
+    }
+    
+    // Populate timezone select
+    function populateTimezones() {
+      const timezones = [
+        "UTC",
+        "America/New_York",
+        "America/Chicago",
+        "America/Denver",
+        "America/Los_Angeles",
+        "Europe/London",
+        "Europe/Paris",
+        "Europe/Berlin",
+        "Europe/Moscow",
+        "Asia/Tokyo",
+        "Asia/Shanghai",
+        "Asia/Dubai",
+        "Asia/Kolkata",
+        "Australia/Sydney",
+        "Pacific/Auckland"
+      ];
+      
+      // Get user's local timezone
+      const localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      
+      // Add local timezone at the top if it's not already in the list
+      if (!timezones.includes(localTimezone)) {
+        timezones.unshift(localTimezone);
+      }
+      
+      timezones.forEach(tz => {
+        const option = document.createElement('option');
+        option.value = tz;
+        option.textContent = tz.replace(/_/g, ' ');
+        
+        if (tz === localTimezone) {
+          option.textContent += ' (Local)';
+          option.selected = true;
+        }
+        
+        timezoneSelect.appendChild(option);
+      });
+    }
+    
+    // Initialize clock elements
+    function initClockElements(clockElement) {
+      const hourMarks = clockElement.querySelector('.hour-marks');
+      const hourNumbers = clockElement.querySelector('.hour-numbers');
+      
+      // Create hour marks
+      for (let i = 0; i < 60; i++) {
+        const li = document.createElement('li');
+        li.style.setProperty('--rotation', `${i * 6}deg`);
+        hourMarks.appendChild(li);
+      }
+      
+      // Create hour numbers
+      for (let i = 1; i <= 12; i++) {
+        const li = document.createElement('li');
+        li.textContent = i;
+        li.style.setProperty('--rotation', `${i * 30}deg`);
+        hourNumbers.appendChild(li);
+      }
+    }
+    
+    // Update analog clock hands
+    function updateClockHands(clockElement, hours, minutes, seconds) {
+      const hourHand = clockElement.querySelector('.hour-hand');
+      const minuteHand = clockElement.querySelector('.minute-hand');
+      const secondHand = clockElement.querySelector('.second-hand');
+      
+      // Calculate rotation angles
+      const secondsRotation = seconds * 6;
+      const minutesRotation = minutes * 6 + seconds / 10;
+      const hoursRotation = hours * 30 + minutes / 2;
+      
+      // Apply rotations
+      secondHand.style.transform = `translateX(-50%) rotate(${secondsRotation}deg)`;
+      minuteHand.style.transform = `translateX(-50%) rotate(${minutesRotation}deg)`;
+      hourHand.style.transform = `translateX(-50%) rotate(${hoursRotation}deg)`;
+    }
+    
+    // Update digital clock
+    function updateDigitalClock(clockElement, date, timezone) {
+      const timeDisplay = clockElement.querySelector('.clock-time');
+      const dateDisplay = clockElement.querySelector('.clock-date');
+      const timezoneDisplay = clockElement.querySelector('.clock-timezone');
+      
+      // Format options
+      const is24Hour = hourFormatSelect.value === '24';
+      const timeOptions = {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: !is24Hour,
+        timeZone: timezone
+      };
+      
+      const dateOptions = {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        timeZone: timezone
+      };
+      
+      // Update displays
+      timeDisplay.textContent = new Intl.DateTimeFormat('en-US', timeOptions).format(date);
+      dateDisplay.textContent = new Intl.DateTimeFormat('en-US', dateOptions).format(date);
+      
+      // Get timezone offset
+      const timeZoneOffset = new Intl.DateTimeFormat('en-US', {
+        timeZoneName: 'short',
+        timeZone: timezone
+      }).formatToParts(date).find(part => part.type === 'timeZoneName').value;
+      
+      timezoneDisplay.textContent = `${timezone.replace(/_/g, ' ')} (${timeZoneOffset})`;
+    }
+    
+    // Update sunrise/sunset information
+    function updateSunriseSunset(clockElement, latitude, longitude) {
+      const sunriseElement = clockElement.querySelector('.sunrise-time');
+      const sunsetElement = clockElement.querySelector('.sunset-time');
+      const sunriseIndicator = clockElement.querySelector('#sunriseIndicator');
+      const sunsetIndicator = clockElement.querySelector('#sunsetIndicator');
+      
+      const now = new Date();
+      const sunTimes = SunCalc.getTimes(now, latitude, longitude);
+      const sunrise = sunTimes.sunrise;
+      const sunset = sunTimes.sunset;
+      
+      // Format sunrise/sunset times
+      const is24Hour = hourFormatSelect.value === '24';
+      const timeOptions = {
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: !is24Hour
+      };
+      
+      sunriseElement.textContent = new Intl.DateTimeFormat('en-US', timeOptions).format(sunrise);
+      sunsetElement.textContent = new Intl.DateTimeFormat('en-US', timeOptions).format(sunset);
+      
+      // Position sunrise/sunset indicators on the clock
+      const clockFace = clockElement.querySelector('.clock-face');
+      const clockRadius = clockFace.offsetWidth / 2;
+      
+      // Calculate position for sunrise (map hours 0-23 to 0-360 degrees)
+      const sunriseHours = sunrise.getHours() + sunrise.getMinutes() / 60;
+      const sunriseAngle = (sunriseHours / 12) * Math.PI * 2 - Math.PI / 2;
+      const sunriseX = clockRadius + Math.cos(sunriseAngle) * (clockRadius - 20);
+      const sunriseY = clockRadius + Math.sin(sunriseAngle) * (clockRadius - 20);
+      
+      // Calculate position for sunset
+      const sunsetHours = sunset.getHours() + sunset.getMinutes() / 60;
+      const sunsetAngle = (sunsetHours / 12) * Math.PI * 2 - Math.PI / 2;
+      const sunsetX = clockRadius + Math.cos(sunsetAngle) * (clockRadius - 20);
+      const sunsetY = clockRadius + Math.sin(sunsetAngle) * (clockRadius - 20);
+      
+      // Update positions
+      sunriseIndicator.style.left = `${sunriseX}px`;
+      sunriseIndicator.style.top = `${sunriseY}px`;
+      sunriseIndicator.classList.remove('hidden');
+      sunriseIndicator.classList.add('pulse');
+      
+      sunsetIndicator.style.left = `${sunsetX}px`;
+      sunsetIndicator.style.top = `${sunsetY}px`;
+      sunsetIndicator.classList.remove('hidden');
+      sunsetIndicator.classList.add('pulse');
+      
+      // Update day/night arc
+      const dayNightArc = clockElement.querySelector('.day-night-arc');
+      const isDay = now > sunrise && now < sunset;
+      
+      if (isDay) {
+        dayNightArc.classList.add('bg-gradient-to-t', 'from-blue-200', 'to-transparent');
+        dayNightArc.classList.remove('bg-gradient-to-t', 'from-indigo-900', 'to-transparent');
+      } else {
+        dayNightArc.classList.add('bg-gradient-to-t', 'from-indigo-900', 'to-transparent');
+        dayNightArc.classList.remove('bg-gradient-to-t', 'from-blue-200', 'to-transparent');
+      }
+    }
+    
+    // Update clock display style
+    function updateClockStyle(clockElement, style) {
+      const analogClock = clockElement.querySelector('.analog-clock');
+      const digitalClock = clockElement.querySelector('.digital-clock');
+      
+      switch (style) {
+        case 'analog':
+          analogClock.classList.remove('hidden');
+          digitalClock.classList.add('hidden');
+          break;
+        case 'digital':
+          analogClock.classList.add('hidden');
+          digitalClock.classList.remove('hidden');
+          break;
+        case 'both':
+        default:
+          analogClock.classList.remove('hidden');
+          digitalClock.classList.remove('hidden');
+          break;
+      }
+    }
+    
+    // Create a new clock
+    function createClock(timezone, name = null) {
+      // Create clock element from template
+      const defaultClock = document.getElementById('defaultClock');
+      const newClock = defaultClock.cloneNode(true);
+      newClock.id = `clock-${Date.now()}`;
+      
+      // Update title
+      const title = newClock.querySelector('h2');
+      title.textContent = name || timezone.replace(/_/g, ' ');
+      
+      // Show remove button for added clocks
+      const removeBtn = newClock.querySelector('.remove-btn');
+      removeBtn.classList.remove('hidden');
+      removeBtn.addEventListener('click', () => {
+        // Remove from DOM
+        newClock.remove();
+        
+        // Remove from clocks array
+        const index = clocks.findIndex(c => c.element.id === newClock.id);
+        if (index !== -1) {
+          clocks.splice(index, 1);
+        }
+        
+        // Update comparison table
+        updateComparisonTable();
+        
+        // Hide comparison section if only one clock remains
+        if (clocks.length <= 1) {
+          comparisonSection.classList.add('hidden');
+        }
+      });
+      
+      // Initialize clock elements
+      initClockElements(newClock);
+      
+      // Add clock to DOM
+      clocksContainer.appendChild(newClock);
+      
+      // Create clock object
+      const clockObj = {
+        element: newClock,
+        timezone: timezone,
+        name: name || timezone.replace(/_/g, ' ')
+      };
+      
+      // Add to clocks array
+      clocks.push(clockObj);
+      
+      // Update comparison table
+      updateComparisonTable();
+      
+      // Show comparison section if more than one clock
+      if (clocks.length > 1) {
+        comparisonSection.classList.remove('hidden');
+      }
+      
+      return clockObj;
+    }
+    
+    // Update comparison table
+    function updateComparisonTable() {
+      if (clocks.length <= 1) return;
+      
+      const tableBody = comparisonTable.querySelector('tbody');
+      tableBody.innerHTML = '';
+      
+      // Use first clock as reference
+      const referenceDate = new Date();
+      const referenceTimezone = clocks[0].timezone;
+      
+      clocks.forEach(clock => {
+        const row = document.createElement('tr');
+        row.className = 'border-b border-gray-300 dark:border-gray-700';
+        
+        // Location cell
+        const locationCell = document.createElement('td');
+        locationCell.className = 'py-2 px-4';
+        locationCell.textContent = clock.name;
+        
+        // Current time cell
+        const timeCell = document.createElement('td');
+        timeCell.className = 'py-2 px-4';
+        const is24Hour = hourFormatSelect.value === '24';
+        const timeOptions = {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: !is24Hour,
+          timeZone: clock.timezone
+        };
+        timeCell.textContent = new Intl.DateTimeFormat('en-US', timeOptions).format(referenceDate);
+        
+        // Time difference cell
+        const diffCell = document.createElement('td');
+        diffCell.className = 'py-2 px-4';
+        
+        // Skip difference calculation for reference timezone
+        if (clock.timezone === referenceTimezone) {
+          diffCell.textContent = 'Reference';
+          diffCell.className += ' text-primary font-medium';
+        } else {
+          // Calculate time difference
+          const options = { timeZone: clock.timezone, hour: 'numeric', hour12: false };
+          const clockHour = parseInt(new Intl.DateTimeFormat('en-US', options).format(referenceDate));
+          
+          options.timeZone = referenceTimezone;
+          const referenceHour = parseInt(new Intl.DateTimeFormat('en-US', options).format(referenceDate));
+          
+          let hourDiff = clockHour - referenceHour;
+          
+          // Handle day boundary cases
+          if (hourDiff > 12) hourDiff -= 24;
+          if (hourDiff < -12) hourDiff += 24;
+          
+          const sign = hourDiff >= 0 ? '+' : '';
+          diffCell.textContent = `${sign}${hourDiff} hours`;
+        }
+        
+        // Day/Night cell
+        const dayNightCell = document.createElement('td');
+        dayNightCell.className = 'py-2 px-4';
+        
+        // Roughly determine day/night (would be more accurate with latitude/longitude)
+        const hourOptions = { timeZone: clock.timezone, hour: 'numeric', hour12: false };
+        const hour = parseInt(new Intl.DateTimeFormat('en-US', hourOptions).format(referenceDate));
+        
+        if (hour >= 6 && hour < 18) {
+          dayNightCell.innerHTML = '<span class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-accent mr-1" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 2a1 1 0 011 1v1a1 1 0 11-2 0V3a1 1 0 011-1zm4 8a4 4 0 11-8 0 4 4 0 018 0zm-.464 4.95l.707.707a1 1 0 001.414-1.414l-.707-.707a1 1 0 00-1.414 1.414zm2.12-10.607a1 1 0 010 1.414l-.706.707a1 1 0 11-1.414-1.414l.707-.707a1 1 0 011.414 0zM17 11a1 1 0 100-2h-1a1 1 0 100 2h1zm-7 4a1 1 0 011 1v1a1 1 0 11-2 0v-1a1 1 0 011-1zM5.05 6.464A1 1 0 106.465 5.05l-.708-.707a1 1 0 00-1.414 1.414l.707.707zm1.414 8.486l-.707.707a1 1 0 01-1.414-1.414l.707-.707a1 1 0 011.414 1.414zM4 11a1 1 0 100-2H3a1 1 0 000 2h1z" clip-rule="evenodd" /></svg> Day</span>';
+        } else {
+          dayNightCell.innerHTML = '<span class="flex items-center"><svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-secondary mr-1" viewBox="0 0 20 20" fill="currentColor"><path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" /></svg> Night</span>';
+        }
+        
+        // Add cells to row
+        row.appendChild(locationCell);
+        row.appendChild(timeCell);
+        row.appendChild(diffCell);
+        row.appendChild(dayNightCell);
+        
+        // Add row to table
+        tableBody.appendChild(row);
+      });
+    }
+    
+    // Update all clocks
+    function updateAllClocks() {
+      const now = new Date();
+      const clockStyle = clockStyleSelect.value;
+      
+      clocks.forEach(clock => {
+        const timeDate = new Date();
+        
+        // Get hours, minutes, seconds for the current timezone
+        const options = { 
+          timeZone: clock.timezone, 
+          hour: 'numeric', 
+          minute: 'numeric', 
+          second: 'numeric',
+          hour12: false 
+        };
+        
+        const timeString = new Intl.DateTimeFormat('en-US', options).format(timeDate);
+        const [hours, minutes, seconds] = timeString.split(':').map(Number);
+        
+        // Update analog clock
+        updateClockHands(clock.element, hours, minutes, seconds);
+        
+        // Update digital clock
+        updateDigitalClock(clock.element, now, clock.timezone);
+        
+        // Update clock style
+        updateClockStyle(clock.element, clockStyle);
+      });
+      
+      // Update comparison table if visible
+      if (!comparisonSection.classList.contains('hidden')) {
+        updateComparisonTable();
+      }
+      
+      requestAnimationFrame(updateAllClocks);
+    }
+    
+    // Initialize default clock
+    function initDefaultClock() {
+      const defaultClockElement = document.getElementById('defaultClock');
+      initClockElements(defaultClockElement);
+      
+      // Create default clock object
+      const localTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const defaultClock = {
+        element: defaultClockElement,
+        timezone: localTimezone,
+        name: 'Local Time'
+      };
+      
+      // Add to clocks array
+      clocks.push(defaultClock);
+      
+      // Update sunrise/sunset for default location
+      updateSunriseSunset(defaultClockElement, defaultLatitude, defaultLongitude);
+    }
+    
+    // Event listeners
+    function setupEventListeners() {
+      // Add clock button
+      addClockBtn.addEventListener('click', () => {
+        const selectedTimezone = timezoneSelect.value;
+        if (selectedTimezone) {
+          createClock(selectedTimezone);
+        }
+      });
+      
+      // Toggle theme button
+      toggleThemeBtn.addEventListener('click', () => {
+        document.documentElement.classList.toggle('dark');
+      });
+      
+      // Hour format change
+      hourFormatSelect.addEventListener('change', () => {
+        updateAllClocks();
+      });
+      
+      // Clock style change
+      clockStyleSelect.addEventListener('change', () => {
+        const style = clockStyleSelect.value;
+        clocks.forEach(clock => {
+          updateClockStyle(clock.element, style);
+        });
+      });
+    }
+    
+    // Initialize application
+    function initApp() {
+      populateTimezones();
+      initDefaultClock();
+      setupEventListeners();
+      updateAllClocks();
+    }
+    
+    // Start the application when the page loads
+    window.addEventListener('load', initApp);
+  </script>
+</body>
+</html>
