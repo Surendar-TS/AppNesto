@@ -5,7 +5,7 @@ export const appsData = [
       category: "fun",
       emoji: "🎵",
       description: "Mix audio tracks directly in your browser",
-      link: "${process.env.PUBLIC_URL}/apps/fun/AudioMixer.html"
+      link: "/AppNesto/apps/fun/AudioMixer.html"
     },
     {
       id: 2,
