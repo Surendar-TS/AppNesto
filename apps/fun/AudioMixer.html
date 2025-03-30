@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASMR Sound Mixer</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #5D5CDE;
+            --primary-hover: #4A49B8;
+        }
+
+        .dark {
+            color-scheme: dark;
+        }
+
+        /* Animations */
+        @keyframes rain {
+            0% { transform: translateY(-10px); opacity: 0; }
+            50% { opacity: 0.7; }
+            100% { transform: translateY(100px); opacity: 0; }
+        }
+
+        @keyframes fire {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+
+        @keyframes typing {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+            100% { transform: translateY(0); }
+        }
+
+        .rain-drop {
+            position: absolute;
+            width: 2px;
+            height: 10px;
+            background-color: #a0d8ef;
+            border-radius: 50%;
+            pointer-events: none;
+            animation: rain 1.5s linear infinite;
+        }
+
+        .dark .rain-drop {
+            background-color: #38bdf8;
+        }
+
+        .fire-effect {
+            position: absolute;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 60px;
+            background: radial-gradient(circle, #ff9d00, #ff7300, #ff4d00);
+            border-radius: 50% 50% 10% 50%;
+            filter: blur(5px);
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .fire-active .fire-effect {
+            opacity: 0.7;
+            animation: fire 1s ease-in-out infinite;
+        }
+
+        .key {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #555;
+            border-radius: 2px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .dark .key {
+            background-color: #aaa;
+        }
+
+        .keyboard-active .key {
+            opacity: 0.7;
+        }
+
+        .typing-animation .key {
+            animation: typing 0.3s ease-in-out;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            appearance: none;
+            height: 8px;
+            border-radius: 4px;
+            background: #d3d3d3;
+            outline: none;
+        }
+
+        .dark .slider {
+            background: #4b5563;
+        }
+
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .slider::-webkit-slider-thumb:hover {
+            background: var(--primary-hover);
+        }
+
+        .slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            cursor: pointer;
+            transition: background 0.2s;
+            border: none;
+        }
+
+        .slider::-moz-range-thumb:hover {
+            background: var(--primary-hover);
+        }
+
+        .sound-tile {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .sound-toggle {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+
+        .sound-toggle input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .sound-toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .dark .sound-toggle-slider {
+            background-color: #4b5563;
+        }
+
+        .sound-toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 18px;
+            width: 18px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .sound-toggle-slider {
+            background-color: var(--primary-color);
+        }
+
+        input:checked + .sound-toggle-slider:before {
+            transform: translateX(24px);
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-white dark:bg-gray-900 text-gray-800 dark:text-gray-200 transition-colors duration-300">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <h1 class="text-3xl font-bold text-center mb-8">ASMR Sound Mixer</h1>
+        
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <!-- Rain Sound Tile -->
+            <div id="rain-tile" class="sound-tile bg-gray-100 dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Rain</h2>
+                    <label class="sound-toggle">
+                        <input type="checkbox" id="rain-toggle">
+                        <span class="sound-toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="mb-4">
+                    <input 
+                        type="range" 
+                        id="rain-volume" 
+                        class="slider w-full" 
+                        min="0" 
+                        max="100" 
+                        value="50"
+                        disabled
+                    >
+                </div>
+                <div class="text-center text-sm text-gray-500 dark:text-gray-400">
+                    Gentle rainfall
+                </div>
+                <div id="rain-animation" class="relative w-full h-24 mt-4"></div>
+            </div>
+            
+            <!-- Keyboard Sound Tile -->
+            <div id="keyboard-tile" class="sound-tile bg-gray-100 dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Keyboard</h2>
+                    <label class="sound-toggle">
+                        <input type="checkbox" id="keyboard-toggle">
+                        <span class="sound-toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="mb-4">
+                    <input 
+                        type="range" 
+                        id="keyboard-volume" 
+                        class="slider w-full" 
+                        min="0" 
+                        max="100" 
+                        value="50"
+                        disabled
+                    >
+                </div>
+                <div class="text-center text-sm text-gray-500 dark:text-gray-400">
+                    Mechanical keyboard clicks
+                </div>
+                <div id="keyboard-animation" class="relative w-full h-24 mt-4"></div>
+            </div>
+            
+            <!-- Fireplace Sound Tile -->
+            <div id="fire-tile" class="sound-tile bg-gray-100 dark:bg-gray-800 rounded-xl shadow-lg p-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-xl font-semibold">Fireplace</h2>
+                    <label class="sound-toggle">
+                        <input type="checkbox" id="fire-toggle">
+                        <span class="sound-toggle-slider"></span>
+                    </label>
+                </div>
+                <div class="mb-4">
+                    <input 
+                        type="range" 
+                        id="fire-volume" 
+                        class="slider w-full" 
+                        min="0" 
+                        max="100" 
+                        value="50"
+                        disabled
+                    >
+                </div>
+                <div class="text-center text-sm text-gray-500 dark:text-gray-400">
+                    Crackling fire
+                </div>
+                <div id="fire-animation" class="relative w-full h-24 mt-4"></div>
+            </div>
+        </div>
+        
+        <div class="flex justify-center mb-8">
+            <button id="copy-settings" class="bg-primary text-white px-6 py-3 rounded-lg shadow hover:bg-primary-dark transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-opacity-50" style="background-color: var(--primary-color);">
+                Copy Mix Settings
+            </button>
+        </div>
+        
+        <div id="status-message" class="hidden text-center mb-4 p-2 rounded"></div>
+    </div>
+
+    <script>
+        // Setup dark mode detection
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Audio Context and nodes
+        let audioContext;
+        let sounds = {
+            rain: { 
+                playing: false, 
+                volume: 0.5, 
+                node: null,
+                source: null,
+                animation: null
+            },
+            keyboard: { 
+                playing: false, 
+                volume: 0.5, 
+                node: null,
+                source: null,
+                animation: null,
+                lastClick: 0
+            },
+            fire: { 
+                playing: false, 
+                volume: 0.5, 
+                node: null,
+                source: null,
+                animation: null
+            }
+        };
+
+        // Initialize audio context on user interaction
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Initialize gain nodes
+                for (const sound in sounds) {
+                    sounds[sound].node = audioContext.createGain();
+                    sounds[sound].node.gain.value = sounds[sound].volume;
+                    sounds[sound].node.connect(audioContext.destination);
+                }
+                
+                // Create sound sources
+                createRainSound();
+                createFireSound();
+                createKeyboardSound();
+            }
+        }
+
+        // Generate white noise for rain sound
+        function createRainSound() {
+            const bufferSize = 2 * audioContext.sampleRate;
+            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            
+            const whiteNoise = audioContext.createBufferSource();
+            whiteNoise.buffer = noiseBuffer;
+            whiteNoise.loop = true;
+            
+            // Apply a filter to make it sound more like rain
+            const rainFilter = audioContext.createBiquadFilter();
+            rainFilter.type = "highpass";
+            rainFilter.frequency.value = 400;
+            
+            whiteNoise.connect(rainFilter);
+            rainFilter.connect(sounds.rain.node);
+            
+            sounds.rain.source = whiteNoise;
+        }
+
+        // Generate filtered noise for fire sound
+        function createFireSound() {
+            const bufferSize = 2 * audioContext.sampleRate;
+            const noiseBuffer = audioContext.createBuffer(1, bufferSize, audioContext.sampleRate);
+            const output = noiseBuffer.getChannelData(0);
+            
+            for (let i = 0; i < bufferSize; i++) {
+                output[i] = Math.random() * 2 - 1;
+            }
+            
+            const noise = audioContext.createBufferSource();
+            noise.buffer = noiseBuffer;
+            noise.loop = true;
+            
+            // Apply filters to make it sound like fire
+            const lowpass = audioContext.createBiquadFilter();
+            lowpass.type = "lowpass";
+            lowpass.frequency.value = 250;
+            
+            const bandpass = audioContext.createBiquadFilter();
+            bandpass.type = "bandpass";
+            bandpass.frequency.value = 700;
+            bandpass.Q.value = 0.7;
+            
+            noise.connect(lowpass);
+            lowpass.connect(bandpass);
+            bandpass.connect(sounds.fire.node);
+            
+            sounds.fire.source = noise;
+        }
+
+        // Generate keyboard click sounds
+        function createKeyboardSound() {
+            // We'll create a function to generate single clicks
+            sounds.keyboard.source = {
+                start: function() {
+                    // This is a placeholder - actual click sounds will be generated on-demand
+                }
+            };
+            
+            // Setup interval for random keyboard clicks
+            sounds.keyboard.interval = null;
+        }
+
+        // Generate a single keyboard click
+        function generateKeyClick() {
+            if (!sounds.keyboard.playing) return;
+            
+            const now = audioContext.currentTime;
+            const clickOscillator = audioContext.createOscillator();
+            const clickGain = audioContext.createGain();
+            
+            // Random click properties for variation
+            const clickFreq = 1000 + Math.random() * 2000;
+            const clickDuration = 0.01 + Math.random() * 0.02;
+            
+            clickOscillator.type = "square";
+            clickOscillator.frequency.value = clickFreq;
+            
+            clickGain.gain.setValueAtTime(sounds.keyboard.volume, now);
+            clickGain.gain.exponentialRampToValueAtTime(0.001, now + clickDuration);
+            
+            clickOscillator.connect(clickGain);
+            clickGain.connect(sounds.keyboard.node);
+            
+            clickOscillator.start(now);
+            clickOscillator.stop(now + clickDuration);
+
+            // Add visual feedback
+            createKeyVisual();
+        }
+
+        // Toggle sound playback
+        function toggleSound(soundName) {
+            initAudio();
+            const sound = sounds[soundName];
+            
+            if (sound.playing) {
+                // Stop the sound
+                if (soundName === 'keyboard') {
+                    clearInterval(sound.interval);
+                } else if (sound.source) {
+                    sound.source.stop();
+                }
+                sound.playing = false;
+                
+                // Stop animation
+                if (soundName === 'rain') {
+                    clearInterval(sound.animation);
+                    const rainContainer = document.getElementById('rain-animation');
+                    rainContainer.innerHTML = '';
+                } else if (soundName === 'keyboard') {
+                    const keyboardContainer = document.getElementById('keyboard-animation');
+                    keyboardContainer.innerHTML = '';
+                    document.getElementById('keyboard-tile').classList.remove('keyboard-active');
+                } else if (soundName === 'fire') {
+                    document.getElementById('fire-tile').classList.remove('fire-active');
+                }
+                
+                // Disable slider
+                document.getElementById(`${soundName}-volume`).disabled = true;
+            } else {
+                // Start the sound
+                if (soundName === 'keyboard') {
+                    sound.interval = setInterval(() => {
+                        if (Math.random() < 0.3) { // Probability of a click
+                            generateKeyClick();
+                        }
+                    }, 100);
+                    document.getElementById('keyboard-tile').classList.add('keyboard-active');
+                    createKeyVisuals();
+                } else {
+                    if (sound.source) {
+                        createRainSound();
+                        createFireSound();
+                        sound.source.start();
+                    }
+                    
+                    // Start animation
+                    if (soundName === 'rain') {
+                        startRainAnimation();
+                    } else if (soundName === 'fire') {
+                        document.getElementById('fire-tile').classList.add('fire-active');
+                        createFireEffect();
+                    }
+                }
+                
+                sound.playing = true;
+                
+                // Enable slider
+                document.getElementById(`${soundName}-volume`).disabled = false;
+            }
+        }
+
+        // Update sound volume
+        function updateVolume(soundName, value) {
+            const sound = sounds[soundName];
+            sound.volume = value / 100;
+            
+            if (sound.node) {
+                sound.node.gain.value = sound.volume;
+            }
+        }
+
+        // Visual effects
+        function startRainAnimation() {
+            const rainContainer = document.getElementById('rain-animation');
+            rainContainer.innerHTML = '';
+            
+            sounds.rain.animation = setInterval(() => {
+                if (!sounds.rain.playing) {
+                    clearInterval(sounds.rain.animation);
+                    return;
+                }
+                
+                const drop = document.createElement('div');
+                drop.className = 'rain-drop';
+                drop.style.left = `${Math.random() * 100}%`;
+                drop.style.animationDuration = `${1 + Math.random()}s`;
+                
+                rainContainer.appendChild(drop);
+                
+                // Remove drop after animation completes
+                setTimeout(() => {
+                    if (drop.parentNode === rainContainer) {
+                        rainContainer.removeChild(drop);
+                    }
+                }, 2000);
+            }, 100);
+        }
+
+        function createFireEffect() {
+            const fireContainer = document.getElementById('fire-animation');
+            fireContainer.innerHTML = '';
+            
+            const fireEffect = document.createElement('div');
+            fireEffect.className = 'fire-effect';
+            fireContainer.appendChild(fireEffect);
+        }
+        
+        function createKeyVisuals() {
+            const keyboardContainer = document.getElementById('keyboard-animation');
+            keyboardContainer.innerHTML = '';
+            
+            // Create 20 keys at random positions
+            for (let i = 0; i < 20; i++) {
+                const key = document.createElement('div');
+                key.className = 'key';
+                key.style.left = `${5 + Math.random() * 90}%`;
+                key.style.top = `${5 + Math.random() * 90}%`;
+                keyboardContainer.appendChild(key);
+            }
+        }
+        
+        function createKeyVisual() {
+            const keyboardContainer = document.getElementById('keyboard-animation');
+            if (!keyboardContainer) return;
+            
+            const keys = keyboardContainer.querySelectorAll('.key');
+            if (keys.length === 0) return;
+            
+            // Pick a random key to animate
+            const randomKey = keys[Math.floor(Math.random() * keys.length)];
+            randomKey.style.opacity = '0.7';
+            randomKey.classList.add('typing-animation');
+            
+            setTimeout(() => {
+                randomKey.classList.remove('typing-animation');
+                if (!sounds.keyboard.playing) {
+                    randomKey.style.opacity = '0';
+                }
+            }, 300);
+        }
+
+        // Copy settings to clipboard
+        function copySettingsToClipboard() {
+            const settings = {
+                rain: { enabled: sounds.rain.playing, volume: Math.round(sounds.rain.volume * 100) },
+                keyboard: { enabled: sounds.keyboard.playing, volume: Math.round(sounds.keyboard.volume * 100) },
+                fire: { enabled: sounds.fire.playing, volume: Math.round(sounds.fire.volume * 100) }
+            };
+            
+            navigator.clipboard.writeText(JSON.stringify(settings))
+                .then(() => {
+                    showStatusMessage('Settings copied to clipboard!', 'success');
+                })
+                .catch(err => {
+                    showStatusMessage('Failed to copy settings: ' + err, 'error');
+                });
+        }
+
+        // Show status message
+        function showStatusMessage(message, type) {
+            const statusEl = document.getElementById('status-message');
+            statusEl.textContent = message;
+            statusEl.classList.remove('hidden', 'bg-green-100', 'text-green-800', 'bg-red-100', 'text-red-800');
+            
+            if (type === 'success') {
+                statusEl.classList.add('bg-green-100', 'text-green-800', 'dark:bg-green-900', 'dark:text-green-200');
+            } else {
+                statusEl.classList.add('bg-red-100', 'text-red-800', 'dark:bg-red-900', 'dark:text-red-200');
+            }
+            
+            setTimeout(() => {
+                statusEl.classList.add('hidden');
+            }, 3000);
+        }
+
+        // Add event listeners
+        document.addEventListener('DOMContentLoaded', () => {
+            // Sound toggles
+            document.getElementById('rain-toggle').addEventListener('change', (e) => {
+                toggleSound('rain');
+            });
+            
+            document.getElementById('keyboard-toggle').addEventListener('change', (e) => {
+                toggleSound('keyboard');
+            });
+            
+            document.getElementById('fire-toggle').addEventListener('change', (e) => {
+                toggleSound('fire');
+            });
+            
+            // Volume sliders
+            document.getElementById('rain-volume').addEventListener('input', (e) => {
+                updateVolume('rain', e.target.value);
+            });
+            
+            document.getElementById('keyboard-volume').addEventListener('input', (e) => {
+                updateVolume('keyboard', e.target.value);
+            });
+            
+            document.getElementById('fire-volume').addEventListener('input', (e) => {
+                updateVolume('fire', e.target.value);
+            });
+            
+            // Copy settings button
+            document.getElementById('copy-settings').addEventListener('click', () => {
+                copySettingsToClipboard();
+            });
+        });
+    </script>
+</body>
+</html>
