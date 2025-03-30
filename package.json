@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "clean": "if exist dist rmdir /s /q dist && if exist node_modules\\.vite rmdir /s /q node_modules\\.vite",
+    "build": "npm run clean && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
     "predeploy": "npm run build",

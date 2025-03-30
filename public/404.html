@@ -1,9 +1,16 @@
 <!DOCTYPE html>
 <html>
-  <head>
-    <script>
-      sessionStorage.redirect = location.href;
-    </script>
-    <meta http-equiv="refresh" content="0;URL='/AppNesto/'">
-  </head>
+<head>
+  <script>
+    const redirect = () => {
+      const path = window.location.pathname;
+      if (path.startsWith('/apps/')) {
+        window.location.href = '/AppNesto' + path;
+      } else {
+        window.location.href = '/AppNesto/';
+      }
+    };
+    redirect();
+  </script>
+</head>
 </html>
