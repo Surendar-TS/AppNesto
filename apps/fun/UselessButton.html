@@ -1,0 +1,433 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Useless Button</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#5D5CDE',
+                        secondary: '#FC6471',
+                    },
+                    animation: {
+                        'bounce-once': 'bounce 0.5s ease-in-out 1',
+                        'spin-once': 'spin 0.5s ease-in-out 1',
+                        'wiggle': 'wiggle 0.5s ease-in-out 1',
+                        'confetti': 'confetti 3s ease-out forwards',
+                    },
+                    keyframes: {
+                        wiggle: {
+                            '0%, 100%': { transform: 'rotate(-3deg)' },
+                            '50%': { transform: 'rotate(3deg)' },
+                        },
+                        confetti: {
+                            '0%': { transform: 'translateY(-100vh)', opacity: '1' },
+                            '100%': { transform: 'translateY(100vh)', opacity: '0' },
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-white dark:bg-gray-900 min-h-screen flex flex-col items-center transition-colors duration-300">
+    <div class="container mx-auto px-4 py-8 flex flex-col items-center">
+        <h1 class="text-3xl md:text-4xl font-bold text-gray-800 dark:text-white mb-6 text-center">The Absolutely Useless Button</h1>
+        
+        <div class="mb-6 text-center">
+            <p class="text-lg text-gray-600 dark:text-gray-300">
+                Click the button below. That's it. Just click it.
+            </p>
+        </div>
+        
+        <div class="flex flex-col items-center justify-center w-full">
+            <!-- Click counter -->
+            <div class="text-2xl md:text-3xl font-bold text-gray-700 dark:text-gray-200 mb-4">
+                Clicks: <span id="click-counter" class="text-primary">0</span>
+            </div>
+            
+            <!-- The Button -->
+            <button id="useless-button" class="relative w-40 h-40 md:w-48 md:h-48 rounded-full bg-primary text-white font-bold text-xl shadow-lg hover:shadow-xl transform hover:scale-105 active:scale-95 transition-all focus:outline-none overflow-hidden">
+                CLICK ME
+                <div id="ripple" class="absolute w-full h-full top-0 left-0 rounded-full pointer-events-none"></div>
+            </button>
+            
+            <!-- Message display -->
+            <div id="message-display" class="mt-6 text-lg md:text-xl text-gray-700 dark:text-gray-300 h-16 text-center min-h-[4rem]">
+                What are you waiting for?
+            </div>
+            
+            <!-- Meme image container -->
+            <div id="meme-container" class="mt-6 hidden">
+                <h3 class="text-xl font-bold text-gray-700 dark:text-white mb-2">Your Achievement Meme</h3>
+                <div class="relative bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
+                    <canvas id="meme-canvas" class="w-full max-w-md"></canvas>
+                </div>
+                <div class="mt-2 flex justify-center">
+                    <button id="share-button" class="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                        </svg>
+                        Share This
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confetti container -->
+    <div id="confetti-container" class="fixed inset-0 pointer-events-none z-50 hidden"></div>
+
+    <script>
+        // Dark mode detection and toggle
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Main application logic
+        document.addEventListener('DOMContentLoaded', () => {
+            // Elements
+            const button = document.getElementById('useless-button');
+            const clickCounter = document.getElementById('click-counter');
+            const messageDisplay = document.getElementById('message-display');
+            const ripple = document.getElementById('ripple');
+            const memeContainer = document.getElementById('meme-container');
+            const memeCanvas = document.getElementById('meme-canvas');
+            const shareButton = document.getElementById('share-button');
+            const confettiContainer = document.getElementById('confetti-container');
+            
+            // Initialize click count from localStorage or start at 0
+            let clickCount = parseInt(localStorage.getItem('uselessButtonClicks') || '0', 10);
+            clickCounter.textContent = clickCount;
+            
+            // Audio context for sound effects
+            let audioContext;
+            
+            // Try to initialize audio context (may be blocked by browsers until user interaction)
+            const initAudio = () => {
+                if (!audioContext) {
+                    try {
+                        audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                    } catch (e) {
+                        console.error('Web Audio API not supported:', e);
+                    }
+                }
+            };
+            
+            // Array of witty messages
+            const messages = [
+                "Really? Just one click?",
+                "Congrats, you've wasted 2 seconds of your life!",
+                "Three clicks... is that all you've got?",
+                "Four clicks. I'm starting to think you like this.",
+                "Five clicks! You must be really bored.",
+                "Six clicks and still no prize. Persistence is key!",
+                "Seven is a lucky number! But not today.",
+                "Eight clicks. Have you considered a hobby?",
+                "Nine clicks... you're quite determined!",
+                "TEN CLICKS! Absolutely nothing happens!",
+                "Still clicking? I admire your dedication.",
+                "This is getting ridiculous, don't you think?",
+                "Are you expecting something to happen?",
+                "Plot twist: this button actually does nothing!",
+                "Your finger must be getting tired by now.",
+                "Psst... the secret is at 100 clicks!",
+                "Just kidding, there's no secret. Or is there?",
+                "Click, click, click. The soundtrack of your life.",
+                "Each click brings you closer to... nothing!",
+                "If clicks were currency, you'd have... very little.",
+                "Some say the meaning of life is in the next click.",
+                "Your clicking powers are impressive!",
+                "Scientists confirm: clicking this button has no effect on climate change.",
+                "Breaking news: Local person won't stop clicking useless button!",
+                "This button doesn't even collect your data. How useless!",
+                "Achievement unlocked: Persistent Clicker!",
+                "Legend has it, someone once clicked 1000 times...",
+                "If you reach 500 clicks, absolutely nothing special will happen.",
+                "Fun fact: This button has been clicked thousands of times by bored people!",
+                "What if the real treasure was the clicks we made along the way?",
+                "Each click generates 0.00001 happiness units.",
+                "Clicking intensifies!",
+                "The button is becoming self-aware...",
+                "Why are we still here? Just to click?",
+                "The button is getting tired...",
+                "Click harder, I can barely feel it!",
+                "Your clicks fuel my existence!",
+                "The universe expands with each click.",
+                "Click or don't click, the button doesn't care.",
+                "Quantum physics states this button both works and doesn't work.",
+                "The button appreciates your attention.",
+                "Clicks go in, nothing comes out. You can't explain that!",
+                "If a button is clicked and no one is around to see it, does it make a sound?",
+                "Your dedication to clicking is concerning.",
+                "The button will remember this.",
+                "Each click strengthens our bond.",
+                "Clicking: the most primitive form of human-computer interaction.",
+                "I bet you can't reach 200 clicks!",
+                "Should you be doing something else right now?",
+                "The button wonders about your life choices."
+            ];
+            
+            // Milestone messages and values
+            const milestones = [
+                { count: 10, message: "🎉 MILESTONE: 10 CLICKS! You've achieved... basically nothing!" },
+                { count: 25, message: "🏆 MILESTONE: 25 CLICKS! Your finger must be getting a workout!" },
+                { count: 50, message: "⭐ MILESTONE: 50 CLICKS! Halfway to 100... if that means anything!" },
+                { count: 69, message: "👀 MILESTONE: Nice." },
+                { count: 100, message: "🎖️ MILESTONE: 100 CLICKS! Seriously, don't you have anything better to do?" },
+                { count: 200, message: "🎯 MILESTONE: 200 CLICKS! Your dedication is both impressive and concerning!" },
+                { count: 300, message: "🔥 MILESTONE: 300 CLICKS! You're a clicking machine!" },
+                { count: 420, message: "🌿 MILESTONE: Blaze it!" },
+                { count: 500, message: "💎 MILESTONE: 500 CLICKS! You're officially click-obsessed!" },
+                { count: 1000, message: "👑 MILESTONE: 1000 CLICKS! You are the Useless Button Champion!" }
+            ];
+            
+            // Animation types
+            const animations = [
+                'animate-bounce-once',
+                'animate-spin-once',
+                'animate-wiggle',
+                'scale-110',
+                'rotate-3',
+                '-rotate-3'
+            ];
+            
+            // Play sound effects
+            const playSound = (frequency = 440, type = 'sine', duration = 0.2) => {
+                if (!audioContext) return;
+                
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.type = type;
+                oscillator.frequency.value = frequency;
+                gainNode.gain.value = 0.2;
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.start();
+                
+                // Fade out to avoid clicks
+                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration);
+                
+                setTimeout(() => {
+                    oscillator.stop();
+                }, duration * 1000);
+            };
+            
+            // Create ripple effect
+            const createRipple = (e) => {
+                const buttonRect = button.getBoundingClientRect();
+                const x = e.clientX - buttonRect.left;
+                const y = e.clientY - buttonRect.top;
+                
+                const circle = document.createElement('span');
+                circle.classList.add('absolute', 'block', 'rounded-full', 'bg-white', 'opacity-30', 'pointer-events-none');
+                
+                const diameter = Math.max(buttonRect.width, buttonRect.height);
+                const radius = diameter / 2;
+                
+                circle.style.width = circle.style.height = `${diameter}px`;
+                circle.style.left = `${x - radius}px`;
+                circle.style.top = `${y - radius}px`;
+                
+                ripple.appendChild(circle);
+                
+                // Animate and remove
+                circle.animate(
+                    [
+                        { transform: 'scale(0)', opacity: 0.3 },
+                        { transform: 'scale(1.5)', opacity: 0 }
+                    ],
+                    {
+                        duration: 600,
+                        easing: 'ease-out'
+                    }
+                );
+                
+                setTimeout(() => {
+                    circle.remove();
+                }, 600);
+            };
+            
+            // Generate meme image
+            const generateMeme = () => {
+                const ctx = memeCanvas.getContext('2d');
+                const width = 800;
+                const height = 300;
+                
+                memeCanvas.width = width;
+                memeCanvas.height = height;
+                
+                const isDarkMode = document.documentElement.classList.contains('dark');
+                const bgColor = isDarkMode ? '#2D3748' : '#F7FAFC';
+                const textColor = isDarkMode ? '#F7FAFC' : '#2D3748';
+                
+                // Fill background
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, width, height);
+                
+                // Draw border
+                ctx.strokeStyle = '#5D5CDE';
+                ctx.lineWidth = 10;
+                ctx.strokeRect(5, 5, width - 10, height - 10);
+                
+                // Draw text
+                ctx.fillStyle = textColor;
+                ctx.textAlign = 'center';
+                
+                // Top text
+                ctx.font = 'bold 36px sans-serif';
+                ctx.fillText('CONGRATULATIONS', width / 2, 60);
+                
+                // Middle text
+                ctx.font = 'bold 48px sans-serif';
+                ctx.fillText('YOU CLICKED A BUTTON', width / 2, 120);
+                
+                // Bottom text
+                ctx.font = 'bold 72px sans-serif';
+                ctx.fillStyle = '#5D5CDE';
+                ctx.fillText(clickCount.toString(), width / 2, 220);
+                
+                ctx.font = 'bold 32px sans-serif';
+                ctx.fillStyle = textColor;
+                ctx.fillText('TIMES', width / 2, 260);
+                
+                // Make meme visible
+                memeContainer.classList.remove('hidden');
+            };
+            
+            // Create confetti effect
+            const createConfetti = () => {
+                confettiContainer.innerHTML = '';
+                confettiContainer.classList.remove('hidden');
+                
+                const colors = ['#5D5CDE', '#FC6471', '#FFD700', '#FF4500', '#32CD32', '#FF69B4'];
+                
+                for (let i = 0; i < 100; i++) {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'absolute w-3 h-3 rounded-full animate-confetti';
+                    confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.left = `${Math.random() * 100}%`;
+                    confetti.style.transform = `translateY(-100vh) rotate(${Math.random() * 360}deg)`;
+                    confetti.style.animationDelay = `${Math.random() * 0.5}s`;
+                    confettiContainer.appendChild(confetti);
+                }
+                
+                setTimeout(() => {
+                    confettiContainer.classList.add('hidden');
+                }, 3000);
+            };
+            
+            // Handle button click
+            button.addEventListener('click', (e) => {
+                initAudio();
+                
+                // Increment and save click count
+                clickCount++;
+                localStorage.setItem('uselessButtonClicks', clickCount.toString());
+                clickCounter.textContent = clickCount;
+                
+                // Create ripple effect
+                createRipple(e);
+                
+                // Play random sound
+                const baseFrequency = 300 + Math.random() * 200;
+                const soundTypes = ['sine', 'triangle', 'square'];
+                playSound(baseFrequency, soundTypes[Math.floor(Math.random() * soundTypes.length)]);
+                
+                // Animate button
+                const animation = animations[Math.floor(Math.random() * animations.length)];
+                button.classList.add(animation);
+                setTimeout(() => {
+                    button.classList.remove(animation);
+                }, 500);
+                
+                // Check for milestones
+                const milestone = milestones.find(m => m.count === clickCount);
+                if (milestone) {
+                    messageDisplay.textContent = milestone.message;
+                    createConfetti();
+                    generateMeme();
+                } else {
+                    // Display random message
+                    const messageIndex = Math.min(messages.length - 1, Math.floor(clickCount / 2));
+                    const randomMessageIndex = Math.floor(Math.random() * Math.min(messageIndex + 1, messages.length));
+                    messageDisplay.textContent = messages[randomMessageIndex];
+                }
+                
+                // Every 50 clicks, regenerate the meme
+                if (clickCount % 50 === 0) {
+                    generateMeme();
+                }
+            });
+            
+            // Handle share button
+            shareButton.addEventListener('click', () => {
+                // Create share text
+                const shareText = `I've clicked this useless button ${clickCount} times! Think you can beat that? Try the Useless Button challenge!`;
+                
+                // Try to use the Web Share API if available
+                if (navigator.share) {
+                    navigator.share({
+                        title: 'The Useless Button Challenge',
+                        text: shareText,
+                        url: window.location.href
+                    }).catch(err => {
+                        console.error('Error sharing:', err);
+                        // Fallback to clipboard
+                        copyToClipboard(shareText);
+                    });
+                } else {
+                    // Fallback to clipboard
+                    copyToClipboard(shareText);
+                }
+            });
+            
+            // Copy text to clipboard
+            const copyToClipboard = (text) => {
+                // Use the Clipboard API if available
+                if (navigator.clipboard && window.isSecureContext) {
+                    navigator.clipboard.writeText(text)
+                        .then(() => {
+                            alert('Share message copied to clipboard!');
+                        })
+                        .catch(err => {
+                            console.error('Failed to copy text:', err);
+                        });
+                } else {
+                    // Fallback method
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    
+                    try {
+                        document.execCommand('copy');
+                        alert('Share message copied to clipboard!');
+                    } catch (err) {
+                        console.error('Failed to copy text:', err);
+                    } finally {
+                        document.body.removeChild(textarea);
+                    }
+                }
+            };
+        });
+    </script>
+</body>
+</html>

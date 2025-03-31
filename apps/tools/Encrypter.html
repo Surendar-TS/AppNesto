@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Secret Keeper - Encrypt Your Messages!</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#5D5CDE',
+            secondary: '#FF6B6B',
+            accent: '#4ECDC4',
+            dark: '#181818',
+            light: '#FFFFFF'
+          }
+        }
+      },
+      darkMode: 'class'
+    }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;700&display=swap');
+    
+    body {
+      font-family: 'Quicksand', sans-serif;
+      transition: background-color 0.3s, color 0.3s;
+    }
+    
+    .gradient-bg {
+      background: linear-gradient(135deg, #5D5CDE 0%, #4ECDC4 100%);
+    }
+    
+    .dark .gradient-bg {
+      background: linear-gradient(135deg, #3D3C8E 0%, #2E9D94 100%);
+    }
+    
+    .password-toggle {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      cursor: pointer;
+    }
+    
+    .meter-item {
+      transition: all 0.3s;
+    }
+    
+    .file-drop-area {
+      border: 2px dashed #ccc;
+      border-radius: 0.5rem;
+      padding: 1.5rem;
+      text-align: center;
+      transition: all 0.3s;
+    }
+    
+    .file-drop-area:hover, .file-drop-area.active {
+      border-color: #5D5CDE;
+      background-color: rgba(93, 92, 222, 0.1);
+    }
+
+    .modal {
+      transition: opacity 0.3s ease;
+    }
+    
+    .modal-content {
+      transform: scale(0.9);
+      transition: transform 0.3s ease;
+    }
+    
+    .modal.active .modal-content {
+      transform: scale(1);
+    }
+
+    .tooltip {
+      position: relative;
+    }
+
+    .tooltip:hover::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      background-color: #333;
+      color: white;
+      padding: 0.25rem 0.5rem;
+      border-radius: 0.25rem;
+      white-space: nowrap;
+      font-size: 0.75rem;
+      z-index: 10;
+    }
+
+    .btn-effect {
+      position: relative;
+      overflow: hidden;
+      transition: all 0.3s;
+    }
+
+    .btn-effect:after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 5px;
+      height: 5px;
+      background: rgba(255, 255, 255, 0.5);
+      opacity: 0;
+      border-radius: 100%;
+      transform: scale(1, 1) translate(-50%);
+      transform-origin: 50% 50%;
+    }
+
+    .btn-effect:hover:after {
+      animation: ripple 1s ease-out;
+    }
+
+    @keyframes ripple {
+      0% {
+        transform: scale(0, 0);
+        opacity: 0.5;
+      }
+      100% {
+        transform: scale(30, 30);
+        opacity: 0;
+      }
+    }
+  </style>
+</head>
+<body class="bg-light dark:bg-dark text-gray-800 dark:text-gray-100 min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-4xl">
+    <header class="text-center mb-8">
+      <div class="gradient-bg p-4 rounded-xl shadow-lg inline-block mb-2">
+        <h1 class="text-3xl font-bold text-white">🔐 Secret Keeper</h1>
+      </div>
+      <p class="text-gray-600 dark:text-gray-300">Super safe encryption for your text & images!</p>
+    </header>
+
+    <main class="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-6 mb-8">
+      <!-- Password Input Section -->
+      <div class="mb-6">
+        <label for="passphrase" class="block mb-2 font-semibold">Secret Password</label>
+        <div class="relative">
+          <input 
+            type="password" 
+            id="passphrase" 
+            class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-base"
+            placeholder="Enter your secret password"
+          >
+          <span class="password-toggle text-gray-500 dark:text-gray-400" id="togglePassword">
+            👁️
+          </span>
+        </div>
+        
+        <!-- Password Strength Meter -->
+        <div class="mt-3">
+          <div class="text-sm mb-2 flex justify-between">
+            <span>Password Strength:</span>
+            <span id="strengthLabel">Not entered</span>
+          </div>
+          <div class="flex gap-1 mb-1">
+            <div class="h-2 rounded flex-1 bg-gray-200 dark:bg-gray-700 meter-item" id="lengthMeter" data-tooltip="Length: 8+ characters"></div>
+            <div class="h-2 rounded flex-1 bg-gray-200 dark:bg-gray-700 meter-item" id="upperMeter" data-tooltip="Uppercase letter"></div>
+            <div class="h-2 rounded flex-1 bg-gray-200 dark:bg-gray-700 meter-item" id="lowerMeter" data-tooltip="Lowercase letter"></div>
+            <div class="h-2 rounded flex-1 bg-gray-200 dark:bg-gray-700 meter-item" id="numberMeter" data-tooltip="Number"></div>
+            <div class="h-2 rounded flex-1 bg-gray-200 dark:bg-gray-700 meter-item" id="specialMeter" data-tooltip="Special character"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabs for Text/Image -->
+      <div class="mb-6">
+        <div class="flex border-b border-gray-300 dark:border-gray-600">
+          <button id="textTabBtn" class="py-2 px-4 font-medium text-primary border-b-2 border-primary">Text Messages</button>
+          <button id="imageTabBtn" class="py-2 px-4 font-medium text-gray-500 dark:text-gray-400">Image Files</button>
+        </div>
+      </div>
+
+      <!-- Text Section -->
+      <div id="textSection" class="mb-6">
+        <div class="mb-4">
+          <label for="messageInput" class="block mb-2 font-semibold">Message</label>
+          <textarea 
+            id="messageInput" 
+            class="w-full p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 h-32 resize-none"
+            placeholder="Type your secret message here or paste encrypted code to decrypt"
+          ></textarea>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button id="encryptTextBtn" class="btn-effect bg-primary hover:bg-opacity-90 text-white py-2 px-6 rounded-lg font-medium shadow-md flex items-center">
+            <span class="mr-2">🔒</span> Encrypt
+          </button>
+          <button id="decryptTextBtn" class="btn-effect bg-secondary hover:bg-opacity-90 text-white py-2 px-6 rounded-lg font-medium shadow-md flex items-center">
+            <span class="mr-2">🔓</span> Decrypt
+          </button>
+          <button id="clearTextBtn" class="btn-effect bg-gray-500 hover:bg-opacity-90 text-white py-2 px-6 rounded-lg font-medium shadow-md flex items-center">
+            <span class="mr-2">🧹</span> Clear
+          </button>
+        </div>
+      </div>
+
+      <!-- Image Section (initially hidden) -->
+      <div id="imageSection" class="mb-6 hidden">
+        <div class="file-drop-area mb-4" id="dropArea">
+          <div class="mb-3">
+            <svg class="w-10 h-10 mx-auto text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          </div>
+          <p class="mb-2">Drop your image here or</p>
+          <button id="browseBtn" class="btn-effect bg-primary hover:bg-opacity-90 text-white py-2 px-4 rounded-lg text-sm">Browse Files</button>
+          <input type="file" id="fileInput" class="hidden" accept="image/*">
+        </div>
+        <div id="fileInfo" class="mb-4 hidden">
+          <div class="flex items-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg">
+            <div class="mr-3 text-2xl">🖼️</div>
+            <div class="flex-1">
+              <p id="fileName" class="font-medium truncate"></p>
+              <p id="fileSize" class="text-sm text-gray-500 dark:text-gray-400"></p>
+            </div>
+            <button id="removeFileBtn" class="text-gray-500 hover:text-red-500 dark:text-gray-400">❌</button>
+          </div>
+        </div>
+        <div class="flex flex-wrap gap-3">
+          <button id="encryptImageBtn" class="btn-effect bg-primary hover:bg-opacity-90 text-white py-2 px-6 rounded-lg font-medium shadow-md flex items-center" disabled>
+            <span class="mr-2">🔒</span> Encrypt Image
+          </button>
+          <button id="decryptImageBtn" class="btn-effect bg-secondary hover:bg-opacity-90 text-white py-2 px-6 rounded-lg font-medium shadow-md flex items-center" disabled>
+            <span class="mr-2">🔓</span> Decrypt Image
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <footer class="text-center text-gray-500 dark:text-gray-400 text-sm">
+      <p>Made with ❤️ for fun, not for serious secrets!</p>
+      <p class="mt-1">All encryption happens in your browser - nothing is ever sent to servers.</p>
+    </footer>
+  </div>
+
+  <!-- Modal -->
+  <div id="resultModal" class="modal fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden">
+    <div class="modal-content bg-white dark:bg-gray-800 rounded-xl shadow-xl max-w-lg w-full mx-4 p-6">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="text-xl font-bold" id="modalTitle">Result</h3>
+        <button id="closeModal" class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 text-xl">✕</button>
+      </div>
+      <div class="mb-4">
+        <div id="modalContent" class="bg-gray-100 dark:bg-gray-700 p-4 rounded-lg max-h-60 overflow-y-auto break-words"></div>
+      </div>
+      <div class="flex justify-end gap-3">
+        <button id="copyBtn" class="btn-effect bg-primary hover:bg-opacity-90 text-white py-2 px-4 rounded-lg font-medium">
+          Copy to Clipboard
+        </button>
+        <button id="closeModalBtn" class="btn-effect bg-gray-500 hover:bg-opacity-90 text-white py-2 px-4 rounded-lg font-medium">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Alert Toast -->
+  <div id="alertToast" class="fixed bottom-4 right-4 bg-red-500 text-white p-4 rounded-lg shadow-lg transform translate-y-20 opacity-0 transition-all duration-300 max-w-xs">
+    <div class="flex items-center">
+      <span class="mr-2">⚠️</span>
+      <span id="alertMessage"></span>
+    </div>
+  </div>
+
+  <script>
+    // Check for dark mode preference
+    if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+      document.documentElement.classList.add('dark');
+    }
+    
+    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+      if (event.matches) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    });
+
+    // DOM elements
+    const passphrase = document.getElementById('passphrase');
+    const togglePassword = document.getElementById('togglePassword');
+    const strengthLabel = document.getElementById('strengthLabel');
+    const lengthMeter = document.getElementById('lengthMeter');
+    const upperMeter = document.getElementById('upperMeter');
+    const lowerMeter = document.getElementById('lowerMeter');
+    const numberMeter = document.getElementById('numberMeter');
+    const specialMeter = document.getElementById('specialMeter');
+    
+    const textTabBtn = document.getElementById('textTabBtn');
+    const imageTabBtn = document.getElementById('imageTabBtn');
+    const textSection = document.getElementById('textSection');
+    const imageSection = document.getElementById('imageSection');
+    
+    const messageInput = document.getElementById('messageInput');
+    const encryptTextBtn = document.getElementById('encryptTextBtn');
+    const decryptTextBtn = document.getElementById('decryptTextBtn');
+    const clearTextBtn = document.getElementById('clearTextBtn');
+    
+    const dropArea = document.getElementById('dropArea');
+    const browseBtn = document.getElementById('browseBtn');
+    const fileInput = document.getElementById('fileInput');
+    const fileInfo = document.getElementById('fileInfo');
+    const fileName = document.getElementById('fileName');
+    const fileSize = document.getElementById('fileSize');
+    const removeFileBtn = document.getElementById('removeFileBtn');
+    const encryptImageBtn = document.getElementById('encryptImageBtn');
+    const decryptImageBtn = document.getElementById('decryptImageBtn');
+    
+    const resultModal = document.getElementById('resultModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalContent = document.getElementById('modalContent');
+    const closeModal = document.getElementById('closeModal');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const copyBtn = document.getElementById('copyBtn');
+    
+    const alertToast = document.getElementById('alertToast');
+    const alertMessage = document.getElementById('alertMessage');
+
+    // Toggle password visibility
+    togglePassword.addEventListener('click', () => {
+      if (passphrase.type === 'password') {
+        passphrase.type = 'text';
+        togglePassword.textContent = '👁️‍🗨️';
+      } else {
+        passphrase.type = 'password';
+        togglePassword.textContent = '👁️';
+      }
+    });
+
+    // Password strength meter
+    passphrase.addEventListener('input', updatePasswordStrength);
+
+    function updatePasswordStrength() {
+      const password = passphrase.value;
+      
+      // Check different criteria
+      const hasLength = password.length >= 8;
+      const hasUpper = /[A-Z]/.test(password);
+      const hasLower = /[a-z]/.test(password);
+      const hasNumber = /[0-9]/.test(password);
+      const hasSpecial = /[^A-Za-z0-9]/.test(password);
+      
+      // Update visual indicators
+      updateMeter(lengthMeter, hasLength);
+      updateMeter(upperMeter, hasUpper);
+      updateMeter(lowerMeter, hasLower);
+      updateMeter(numberMeter, hasNumber);
+      updateMeter(specialMeter, hasSpecial);
+      
+      // Calculate overall strength
+      const criteria = [hasLength, hasUpper, hasLower, hasNumber, hasSpecial];
+      const metCriteria = criteria.filter(Boolean).length;
+      
+      if (password.length === 0) {
+        strengthLabel.textContent = 'Not entered';
+        strengthLabel.className = 'text-gray-500';
+      } else if (metCriteria <= 1) {
+        strengthLabel.textContent = 'Very Weak';
+        strengthLabel.className = 'text-red-500';
+      } else if (metCriteria === 2) {
+        strengthLabel.textContent = 'Weak';
+        strengthLabel.className = 'text-orange-500';
+      } else if (metCriteria === 3) {
+        strengthLabel.textContent = 'Moderate';
+        strengthLabel.className = 'text-yellow-500';
+      } else if (metCriteria === 4) {
+        strengthLabel.textContent = 'Strong';
+        strengthLabel.className = 'text-green-500';
+      } else {
+        strengthLabel.textContent = 'Very Strong';
+        strengthLabel.className = 'text-emerald-500';
+      }
+
+        // ✅ Update the meter linearly based on metCriteria
+        const meters = [lengthMeter, upperMeter, lowerMeter, numberMeter, specialMeter];
+        meters.forEach((meter, index) => {
+        if (index < metCriteria) {
+            meter.classList.remove('bg-gray-200', 'dark:bg-gray-700');
+            meter.classList.add('bg-green-500');
+            } else {
+            meter.classList.remove('bg-green-500');
+            meter.classList.add('bg-gray-200', 'dark:bg-gray-700');
+            }
+        });
+
+
+    }
+
+
+    // Tab switching
+    textTabBtn.addEventListener('click', () => {
+      textTabBtn.classList.add('text-primary', 'border-b-2', 'border-primary');
+      textTabBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
+      
+      imageTabBtn.classList.remove('text-primary', 'border-b-2', 'border-primary');
+      imageTabBtn.classList.add('text-gray-500', 'dark:text-gray-400');
+      
+      textSection.classList.remove('hidden');
+      imageSection.classList.add('hidden');
+    });
+
+    imageTabBtn.addEventListener('click', () => {
+      imageTabBtn.classList.add('text-primary', 'border-b-2', 'border-primary');
+      imageTabBtn.classList.remove('text-gray-500', 'dark:text-gray-400');
+      
+      textTabBtn.classList.remove('text-primary', 'border-b-2', 'border-primary');
+      textTabBtn.classList.add('text-gray-500', 'dark:text-gray-400');
+      
+      imageSection.classList.remove('hidden');
+      textSection.classList.add('hidden');
+    });
+
+    // Clear text
+    clearTextBtn.addEventListener('click', () => {
+      messageInput.value = '';
+    });
+
+    // File handling
+    let selectedFile = null;
+
+    browseBtn.addEventListener('click', () => {
+      fileInput.click();
+    });
+
+    fileInput.addEventListener('change', handleFileSelect);
+
+    function handleFileSelect(e) {
+      selectedFile = e.target.files[0];
+      if (selectedFile) {
+        displayFileInfo(selectedFile);
+        updateImageButtons();
+      }
+    }
+
+    function displayFileInfo(file) {
+      fileName.textContent = file.name;
+      fileSize.textContent = formatFileSize(file.size);
+      fileInfo.classList.remove('hidden');
+    }
+
+    function formatFileSize(bytes) {
+      if (bytes < 1024) return bytes + ' bytes';
+      else if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+      else return (bytes / 1048576).toFixed(1) + ' MB';
+    }
+
+    removeFileBtn.addEventListener('click', () => {
+      selectedFile = null;
+      fileInput.value = '';
+      fileInfo.classList.add('hidden');
+      updateImageButtons();
+    });
+
+    function updateImageButtons() {
+      encryptImageBtn.disabled = !selectedFile;
+      decryptImageBtn.disabled = !selectedFile;
+      
+      if (selectedFile) {
+        encryptImageBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+        decryptImageBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+      } else {
+        encryptImageBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        decryptImageBtn.classList.add('opacity-50', 'cursor-not-allowed');
+      }
+    }
+
+    // Drag and drop
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, preventDefaults, false);
+    });
+
+    function preventDefaults(e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropArea.addEventListener(eventName, highlight, false);
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, unhighlight, false);
+    });
+
+    function highlight() {
+      dropArea.classList.add('active');
+    }
+
+    function unhighlight() {
+      dropArea.classList.remove('active');
+    }
+
+    dropArea.addEventListener('drop', handleDrop, false);
+
+    function handleDrop(e) {
+      const dt = e.dataTransfer;
+      const files = dt.files;
+      
+      if (files.length > 0 && files[0].type.startsWith('image/')) {
+        selectedFile = files[0];
+        displayFileInfo(selectedFile);
+        updateImageButtons();
+      } else {
+        showAlert('Please drop an image file.');
+      }
+    }
+
+    // Modal handling
+    function showModal(title, content) {
+      modalTitle.textContent = title;
+      modalContent.textContent = content;
+      resultModal.classList.remove('hidden');
+      setTimeout(() => {
+        resultModal.classList.add('active');
+      }, 10);
+    }
+
+    function hideModal() {
+      resultModal.classList.remove('active');
+      setTimeout(() => {
+        resultModal.classList.add('hidden');
+      }, 300);
+    }
+
+    closeModal.addEventListener('click', hideModal);
+    closeModalBtn.addEventListener('click', hideModal);
+
+    // Copy to clipboard
+    copyBtn.addEventListener('click', () => {
+      const textToCopy = modalContent.textContent;
+      navigator.clipboard.writeText(textToCopy + "\n\n(Encrypted with Secret Keeper - https://poe.com)").then(() => {
+        showAlert('Copied to clipboard!', 'success');
+      }).catch(err => {
+        showAlert('Failed to copy: ' + err);
+      });
+    });
+
+    // Alert toast
+    function showAlert(message, type = 'error') {
+      alertMessage.textContent = message;
+      
+      if (type === 'error') {
+        alertToast.classList.remove('bg-green-500');
+        alertToast.classList.add('bg-red-500');
+      } else {
+        alertToast.classList.remove('bg-red-500');
+        alertToast.classList.add('bg-green-500');
+      }
+      
+      alertToast.classList.remove('translate-y-20', 'opacity-0');
+      
+      setTimeout(() => {
+        alertToast.classList.add('translate-y-20', 'opacity-0');
+      }, 3000);
+    }
+
+    // Cryptography functions
+    async function deriveKey(passphrase, salt, iterations = 100000) {
+      const encoder = new TextEncoder();
+      const passphraseData = encoder.encode(passphrase);
+      const importedKey = await window.crypto.subtle.importKey(
+        'raw',
+        passphraseData,
+        { name: 'PBKDF2' },
+        false,
+        ['deriveKey']
+      );
+      
+      return window.crypto.subtle.deriveKey(
+        {
+          name: 'PBKDF2',
+          salt: salt,
+          iterations: iterations,
+          hash: 'SHA-256'
+        },
+        importedKey,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+      );
+    }
+
+    async function encryptData(data, passphrase) {
+      if (!passphrase) {
+        throw new Error('Password is required!');
+      }
+
+      // Generate random salt and IV
+      const salt = window.crypto.getRandomValues(new Uint8Array(16));
+      const iv = window.crypto.getRandomValues(new Uint8Array(12));
+      
+      // Derive key from passphrase
+      const key = await deriveKey(passphrase, salt);
+      
+      // Encrypt the data
+      const encryptedData = await window.crypto.subtle.encrypt(
+        {
+          name: 'AES-GCM',
+          iv: iv
+        },
+        key,
+        data
+      );
+      
+      // Combine salt, IV, and encrypted data into a single array
+      const result = new Uint8Array(salt.length + iv.length + encryptedData.byteLength);
+      result.set(salt, 0);
+      result.set(iv, salt.length);
+      result.set(new Uint8Array(encryptedData), salt.length + iv.length);
+      
+      return result;
+    }
+
+    async function decryptData(encryptedData, passphrase) {
+      if (!passphrase) {
+        throw new Error('Password is required!');
+      }
+
+      // Extract salt, IV, and encrypted data
+      const salt = encryptedData.slice(0, 16);
+      const iv = encryptedData.slice(16, 28);
+      const data = encryptedData.slice(28);
+      
+      // Derive key from passphrase and salt
+      const key = await deriveKey(passphrase, salt);
+      
+      try {
+        // Decrypt the data
+        const decryptedData = await window.crypto.subtle.decrypt(
+          {
+            name: 'AES-GCM',
+            iv: iv
+          },
+          key,
+          data
+        );
+        
+        return decryptedData;
+      } catch (error) {
+        throw new Error('Decryption failed! Make sure your password is correct and the data is not corrupted.');
+      }
+    }
+
+    // Text encryption/decryption
+    encryptTextBtn.addEventListener('click', async () => {
+      try {
+        const message = messageInput.value;
+        if (!message) {
+          throw new Error('Please enter a message to encrypt!');
+        }
+        
+        const password = passphrase.value;
+        if (!password) {
+          throw new Error('Please enter a password!');
+        }
+        
+        const encoder = new TextEncoder();
+        const messageData = encoder.encode(message);
+        
+        const encryptedData = await encryptData(messageData, password);
+        
+        // Convert to Base64 for text representation
+        const base64 = btoa(String.fromCharCode.apply(null, encryptedData));
+        
+        showModal('Encrypted Message', base64);
+        messageInput.value = '';
+      } catch (error) {
+        showAlert(error.message);
+      }
+    });
+
+    decryptTextBtn.addEventListener('click', async () => {
+      try {
+        const encryptedMessage = messageInput.value.trim();
+        if (!encryptedMessage) {
+          throw new Error('Please enter an encrypted message to decrypt!');
+        }
+        
+        const password = passphrase.value;
+        if (!password) {
+          throw new Error('Please enter a password!');
+        }
+        
+        // Convert from Base64
+        try {
+          const binaryString = atob(encryptedMessage);
+          const bytes = new Uint8Array(binaryString.length);
+          for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+          }
+          
+          const decryptedData = await decryptData(bytes, password);
+          const decoder = new TextDecoder();
+          const decryptedMessage = decoder.decode(decryptedData);
+          
+          showModal('Decrypted Message', decryptedMessage);
+          messageInput.value = '';
+        } catch (e) {
+          if (e.message.includes('atob')) {
+            throw new Error('Invalid encrypted message format! Please enter Base64 encoded text.');
+          } else {
+            throw e;
+          }
+        }
+      } catch (error) {
+        showAlert(error.message);
+      }
+    });
+
+    // Image encryption/decryption
+    encryptImageBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      
+      try {
+        const password = passphrase.value;
+        if (!password) {
+          throw new Error('Please enter a password!');
+        }
+        
+        // Read the file
+        const fileReader = new FileReader();
+        fileReader.onload = async function(event) {
+          try {
+            const fileData = new Uint8Array(event.target.result);
+            
+            // Prepend the file type for later recovery
+            const fileTypeStr = selectedFile.type;
+            const encoder = new TextEncoder();
+            const fileTypeData = encoder.encode(fileTypeStr);
+            
+            // Create a combined array with file type info and file data
+            const combinedData = new Uint8Array(4 + fileTypeData.length + fileData.length);
+            
+            // First 4 bytes = length of file type string
+            const typeLength = fileTypeData.length;
+            combinedData[0] = typeLength >> 24 & 0xFF;
+            combinedData[1] = typeLength >> 16 & 0xFF;
+            combinedData[2] = typeLength >> 8 & 0xFF;
+            combinedData[3] = typeLength & 0xFF;
+            
+            // Next bytes = file type string
+            combinedData.set(fileTypeData, 4);
+            
+            // Remaining bytes = file data
+            combinedData.set(fileData, 4 + fileTypeData.length);
+            
+            // Encrypt the combined data
+            const encryptedData = await encryptData(combinedData, password);
+            
+            // Create a download link
+            const blob = new Blob([encryptedData], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            
+            // Create filename
+            const originalName = selectedFile.name;
+            const lastDotIndex = originalName.lastIndexOf('.');
+            let baseName = originalName;
+            if (lastDotIndex > 0) {
+              baseName = originalName.substring(0, lastDotIndex);
+            }
+            //const encryptedName = `encrypted_${baseName}.bin`;
+            const encryptedName = `encrypted_${baseName}${originalName.slice(lastDotIndex)}`;
+            
+            // Create download link
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = encryptedName;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            showAlert('Image encrypted and downloaded!', 'success');
+            
+            // Clean up
+            URL.revokeObjectURL(url);
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.classList.add('hidden');
+            updateImageButtons();
+          } catch (error) {
+            showAlert('Encryption failed: ' + error.message);
+          }
+        };
+        
+        fileReader.readAsArrayBuffer(selectedFile);
+      } catch (error) {
+        showAlert(error.message);
+      }
+    });
+
+    decryptImageBtn.addEventListener('click', async () => {
+      if (!selectedFile) return;
+      
+      try {
+        const password = passphrase.value;
+        if (!password) {
+          throw new Error('Please enter a password!');
+        }
+        
+        // Read the file
+        const fileReader = new FileReader();
+        fileReader.onload = async function(event) {
+          try {
+            const encryptedData = new Uint8Array(event.target.result);
+            
+            // Decrypt the data
+            const decryptedData = await decryptData(encryptedData, password);
+            const decryptedArray = new Uint8Array(decryptedData);
+            
+            // Extract file type info
+            const typeLength = (decryptedArray[0] << 24) |
+                              (decryptedArray[1] << 16) |
+                              (decryptedArray[2] << 8) |
+                              decryptedArray[3];
+            
+            const fileTypeArray = decryptedArray.slice(4, 4 + typeLength);
+            const decoder = new TextDecoder();
+            const fileType = decoder.decode(fileTypeArray);
+            
+            // Extract file data
+            const fileData = decryptedArray.slice(4 + typeLength);
+            
+            // Create a blob
+            const blob = new Blob([fileData], { type: fileType });
+            const url = URL.createObjectURL(blob);
+            
+            // Create filename
+            const originalName = selectedFile.name;
+            const lastDotIndex = originalName.lastIndexOf('.');
+            let baseName = originalName;
+            if (lastDotIndex > 0) {
+              baseName = originalName.substring(0, lastDotIndex);
+            }
+            
+            // Determine file extension from MIME type
+            let extension = '.file';
+            if (fileType === 'image/jpeg') extension = '.jpg';
+            else if (fileType === 'image/png') extension = '.png';
+            else if (fileType === 'image/gif') extension = '.gif';
+            else if (fileType === 'image/webp') extension = '.webp';
+            else if (fileType === 'image/svg+xml') extension = '.svg';
+            
+            const decryptedName = `decrypted_${baseName}${extension}`;
+            
+            // Create download link
+            const downloadLink = document.createElement('a');
+            downloadLink.href = url;
+            downloadLink.download = decryptedName;
+            document.body.appendChild(downloadLink);
+            downloadLink.click();
+            document.body.removeChild(downloadLink);
+            
+            showAlert('Image decrypted and downloaded!', 'success');
+            
+            // Clean up
+            URL.revokeObjectURL(url);
+            selectedFile = null;
+            fileInput.value = '';
+            fileInfo.classList.add('hidden');
+            updateImageButtons();
+          } catch (error) {
+            showAlert('Decryption failed: ' + error.message);
+          }
+        };
+        
+        fileReader.readAsArrayBuffer(selectedFile);
+      } catch (error) {
+        showAlert(error.message);
+      }
+    });
+  </script>
+</body>
+</html>

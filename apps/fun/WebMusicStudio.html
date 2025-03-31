@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Music Studio</title>
+    <style>
+        .piano-key {
+            display: inline-block;
+            width: 60px;
+            height: 200px;
+            border: 1px solid #000;
+            margin: 2px;
+            cursor: pointer;
+            background: white;
+        }
+        .black-key {
+            background: black;
+            height: 120px;
+            width: 40px;
+            margin: 0 -22px;
+            z-index: 2;
+        }
+        .drum-pad {
+            width: 80px;
+            height: 80px;
+            background: #666;
+            margin: 10px;
+            display: inline-block;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+        .active { background: #ff4444; }
+    </style>
+</head>
+<body>
+    <!-- Piano -->
+    <div id="piano">
+        <div data-note="C4" class="piano-key">A</div>
+        <div data-note="C#4" class="piano-key black-key">W</div>
+        <div data-note="D4" class="piano-key">S</div>
+        <!-- Add more keys... -->
+    </div>
+
+    <!-- Drums -->
+    <div id="drums">
+        <div data-sound="kick" class="drum-pad">Kick (Z)</div>
+        <div data-sound="snare" class="drum-pad">Snare (X)</div>
+        <div data-sound="hihat" class="drum-pad">Hi-Hat (C)</div>
+    </div>
+
+    <script>
+        // Initialize Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        // Piano sounds (using oscillator)
+        function playPianoNote(note) {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(getFrequency(note), audioContext.currentTime);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 1);
+            
+            oscillator.connect(gainNode).connect(audioContext.destination);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 1);
+        }
+
+        // Drum samples (preloaded)
+        const drumSounds = {
+            kick: 'path/to/kick.wav',
+            snare: 'path/to/snare.wav',
+            hihat: 'path/to/hihat.wav'
+        };
+
+        // Keyboard controls
+        document.addEventListener('keydown', (e) => {
+            const key = e.key.toUpperCase();
+            if (key === 'A') playPianoNote('C4');
+            if (key === 'Z') playDrum('kick');
+            // Add more key mappings...
+        });
+
+        // Helper functions
+        function getFrequency(note) {
+            // Implement note-to-frequency conversion
+        }
+    </script>
+</body>
+</html>

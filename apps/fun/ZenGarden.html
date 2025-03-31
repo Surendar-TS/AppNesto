@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Virtual Zen Garden</title>
+    <script src="https://cdn.jsdelivr.net/npm/howler@2.2.3/dist/howler.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: #f5f2ea;
+            --sand-color: #e8e0d0;
+            --stone-color: #72716e;
+            --accent-color: #5D5CDE;
+            --text-color: #333333;
+            --border-color: #d3cdc1;
+            --shadow-color: rgba(0, 0, 0, 0.1);
+            --toolbar-bg: #ffffff;
+            --slider-bg: #e0ded8;
+            --bamboo-color: #7a9458;
+            --path-color: #d9cfba;
+        }
+
+        .dark {
+            --primary-bg: #181818;
+            --sand-color: #2b2a25;
+            --stone-color: #4a4945;
+            --accent-color: #7d7cef;
+            --text-color: #e0e0e0;
+            --border-color: #3a3832;
+            --shadow-color: rgba(0, 0, 0, 0.3);
+            --toolbar-bg: #222222;
+            --slider-bg: #2d2c2a;
+            --bamboo-color: #5e7043;
+            --path-color: #3c3a34;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: var(--primary-bg);
+            color: var(--text-color);
+            min-height: 100vh;
+            overflow: hidden;
+            transition: background-color 0.3s ease;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .header {
+            text-align: center;
+            padding: 0.5rem 0 1rem;
+        }
+
+        h1 {
+            font-size: 1.8rem;
+            color: var(--text-color);
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+            letter-spacing: 3px;
+        }
+
+        .garden-area {
+            flex: 1;
+            position: relative;
+            background-color: var(--sand-color);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px var(--shadow-color);
+            min-height: 300px;
+            transition: background-color 0.3s ease;
+        }
+
+        .sand-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        .decorations {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+        }
+
+        .decoration {
+            position: absolute;
+            cursor: grab;
+            pointer-events: auto;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            user-select: none;
+            touch-action: none;
+        }
+
+        .decoration.dragging {
+            cursor: grabbing;
+            z-index: 10;
+        }
+
+        .stone {
+            background-color: var(--stone-color);
+            border-radius: 50%;
+            box-shadow: 2px 2px 4px var(--shadow-color);
+        }
+
+        .bamboo {
+            width: 30px;
+            height: 80px;
+            background: linear-gradient(to right, 
+                             var(--bamboo-color) 0%, 
+                             var(--bamboo-color) 45%, 
+                             #8aac62 50%, 
+                             var(--bamboo-color) 55%, 
+                             var(--bamboo-color) 100%);
+            border-radius: 4px;
+            box-shadow: 2px 2px 4px var(--shadow-color);
+        }
+
+        .leaf {
+            position: absolute;
+            width: 25px;
+            height: 12px;
+            background-color: #94b56a;
+            border-radius: 50%;
+            transform-origin: 0% 50%;
+        }
+
+        .toolbar {
+            display: flex;
+            justify-content: space-between;
+            padding: 1rem;
+            background-color: var(--toolbar-bg);
+            border-radius: 8px;
+            margin: 1rem 0;
+            box-shadow: 0 2px 8px var(--shadow-color);
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .toolbar-section {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .tool-button {
+            padding: 0.5rem 1rem;
+            background-color: var(--primary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-color);
+            transition: all 0.2s ease;
+        }
+
+        .tool-button:hover {
+            background-color: var(--sand-color);
+        }
+
+        .tool-button.active {
+            background-color: var(--accent-color);
+            color: white;
+            border-color: var(--accent-color);
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .slider-label {
+            width: 80px;
+            font-size: 0.9rem;
+        }
+
+        .circular-slider {
+            position: relative;
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: var(--slider-bg);
+            margin: 0 10px;
+            cursor: pointer;
+        }
+
+        .slider-knob {
+            position: absolute;
+            width: 16px;
+            height: 16px;
+            background-color: var(--accent-color);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(0deg) translate(17px, 0);
+            box-shadow: 0 2px 4px var(--shadow-color);
+        }
+
+        .sound-controls {
+            display: flex;
+            flex-direction: column;
+            background-color: var(--toolbar-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-top: 1rem;
+            box-shadow: 0 2px 8px var(--shadow-color);
+        }
+
+        .sound-controls h2 {
+            font-size: 1.2rem;
+            margin-bottom: 1rem;
+            font-weight: 400;
+        }
+
+        .sound-sliders {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            justify-content: space-around;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 0.5rem;
+            }
+
+            .toolbar {
+                justify-content: center;
+            }
+
+            .toolbar-section {
+                width: 100%;
+                justify-content: center;
+                margin-bottom: 0.5rem;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            .garden-area {
+                min-height: 200px;
+            }
+        }
+
+        .sakura-petal {
+            position: absolute;
+            width: 15px;
+            height: 10px;
+            background-color: #ffdbf0;
+            border-radius: 50%;
+            opacity: 0.8;
+            z-index: 3;
+            pointer-events: none;
+            animation: fall linear forwards;
+        }
+
+        @keyframes fall {
+            0% {
+                transform: translate(0, 0) rotate(0deg);
+            }
+            100% {
+                transform: translate(calc(var(--fall-distance-x) * 1px), calc(var(--fall-distance-y) * 1px)) rotate(calc(var(--rotation) * 1deg));
+            }
+        }
+
+        .path {
+            fill: none;
+            stroke: var(--path-color);
+            stroke-linecap: round;
+            stroke-linejoin: round;
+            pointer-events: none;
+        }
+
+        .stone-ripple {
+            position: absolute;
+            border-radius: 50%;
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            transform: translate(-50%, -50%);
+            animation: ripple 1s ease-out forwards;
+            pointer-events: none;
+        }
+
+        @keyframes ripple {
+            0% {
+                width: 0;
+                height: 0;
+                opacity: 0.7;
+            }
+            100% {
+                width: 100px;
+                height: 100px;
+                opacity: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>VIRTUAL ZEN GARDEN</h1>
+        </div>
+
+        <div class="toolbar">
+            <div class="toolbar-section">
+                <button class="tool-button active" id="rake-tool">Rake Sand</button>
+                <button class="tool-button" id="stone-tool">Place Stone</button>
+                <button class="tool-button" id="bamboo-tool">Place Bamboo</button>
+            </div>
+            <div class="toolbar-section">
+                <button class="tool-button" id="rake-size">Rake Size</button>
+                <button class="tool-button" id="clear-garden">Reset Garden</button>
+            </div>
+        </div>
+
+        <div class="garden-area" id="garden">
+            <svg class="sand-canvas" id="sand-canvas"></svg>
+            <div class="decorations" id="decorations"></div>
+        </div>
+
+        <div class="sound-controls">
+            <h2>Ambient Sounds</h2>
+            <div class="sound-sliders">
+                <div class="slider-container">
+                    <div class="slider-label">Water</div>
+                    <div class="circular-slider" data-sound="water">
+                        <div class="slider-knob"></div>
+                    </div>
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">Wind</div>
+                    <div class="circular-slider" data-sound="wind">
+                        <div class="slider-knob"></div>
+                    </div>
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">Chimes</div>
+                    <div class="circular-slider" data-sound="chimes">
+                        <div class="slider-knob"></div>
+                    </div>
+                </div>
+                <div class="slider-container">
+                    <div class="slider-label">Birds</div>
+                    <div class="circular-slider" data-sound="birds">
+                        <div class="slider-knob"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dark mode detection
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+            if (event.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+        });
+
+        // Garden state
+        const state = {
+            currentTool: 'rake',
+            rakeSize: 8,
+            isDrawing: false,
+            currentPath: null,
+            pathPoints: [],
+            decorations: [],
+            zIndex: 10,
+            sounds: {
+                water: null,
+                wind: null,
+                chimes: null,
+                birds: null
+            },
+            soundVolumes: {
+                water: 0,
+                wind: 0,
+                chimes: 0,
+                birds: 0
+            }
+        };
+
+        // DOM Elements
+        const garden = document.getElementById('garden');
+        const sandCanvas = document.getElementById('sand-canvas');
+        const decorationsContainer = document.getElementById('decorations');
+        const toolButtons = document.querySelectorAll('.tool-button');
+        const rakeTool = document.getElementById('rake-tool');
+        const stoneTool = document.getElementById('stone-tool');
+        const bambooTool = document.getElementById('bamboo-tool');
+        const rakeSizeButton = document.getElementById('rake-size');
+        const clearGardenButton = document.getElementById('clear-garden');
+        const circularSliders = document.querySelectorAll('.circular-slider');
+
+        // Initialize the garden
+        function initGarden() {
+            // Set garden dimensions
+            updateGardenDimensions();
+            window.addEventListener('resize', updateGardenDimensions);
+
+            // Tool selection
+            toolButtons.forEach(button => {
+                button.addEventListener('click', handleToolSelection);
+            });
+
+            // Garden interactions
+            garden.addEventListener('mousedown', handleInteractionStart);
+            garden.addEventListener('mousemove', handleInteractionMove);
+            garden.addEventListener('mouseup', handleInteractionEnd);
+            garden.addEventListener('mouseleave', handleInteractionEnd);
+            
+            // Touch events
+            garden.addEventListener('touchstart', handleTouchStart);
+            garden.addEventListener('touchmove', handleTouchMove);
+            garden.addEventListener('touchend', handleTouchEnd);
+
+            // Button actions
+            clearGardenButton.addEventListener('click', clearGarden);
+            rakeSizeButton.addEventListener('click', toggleRakeSize);
+
+            // Initialize sounds
+            initSounds();
+
+            // Initialize sliders
+            initSliders();
+
+            // Add random decorations (optional - for initial visual appeal)
+            addRandomDecorations(3);
+            
+            // Start sakura animation
+            startSakuraAnimation();
+        }
+
+        function updateGardenDimensions() {
+            // Make sure SVG dimensions match the container
+            sandCanvas.setAttribute('width', garden.clientWidth);
+            sandCanvas.setAttribute('height', garden.clientHeight);
+        }
+
+        function handleToolSelection(e) {
+            // Remove active class from all buttons
+            toolButtons.forEach(button => button.classList.remove('active'));
+            
+            // Add active class to clicked button
+            e.target.classList.add('active');
+            
+            // Update current tool
+            if (e.target.id === 'rake-tool') {
+                state.currentTool = 'rake';
+            } else if (e.target.id === 'stone-tool') {
+                state.currentTool = 'stone';
+            } else if (e.target.id === 'bamboo-tool') {
+                state.currentTool = 'bamboo';
+            }
+        }
+
+        function handleInteractionStart(e) {
+            if (state.currentTool === 'rake') {
+                startDrawing(getPointerPosition(e));
+            } else if (state.currentTool === 'stone' || state.currentTool === 'bamboo') {
+                const pos = getPointerPosition(e);
+                addDecoration(state.currentTool, pos.x, pos.y);
+            }
+        }
+
+        function handleInteractionMove(e) {
+            if (state.currentTool === 'rake' && state.isDrawing) {
+                continueDrawing(getPointerPosition(e));
+            }
+        }
+
+        function handleInteractionEnd() {
+            if (state.currentTool === 'rake' && state.isDrawing) {
+                endDrawing();
+            }
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault(); // Prevent scrolling when touching the garden
+            handleInteractionStart(e.touches[0]);
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            handleInteractionMove(e.touches[0]);
+        }
+
+        function handleTouchEnd(e) {
+            handleInteractionEnd();
+        }
+
+        function getPointerPosition(e) {
+            const rect = garden.getBoundingClientRect();
+            return {
+                x: e.clientX - rect.left,
+                y: e.clientY - rect.top
+            };
+        }
+
+        // Sand raking functionality
+        function startDrawing(pos) {
+            state.isDrawing = true;
+            state.pathPoints = [`M${pos.x},${pos.y}`];
+            
+            // Create a new path element
+            state.currentPath = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            state.currentPath.setAttribute('class', 'path');
+            state.currentPath.setAttribute('stroke-width', state.rakeSize);
+            state.currentPath.setAttribute('d', state.pathPoints.join(' '));
+            
+            sandCanvas.appendChild(state.currentPath);
+        }
+
+        function continueDrawing(pos) {
+            if (!state.isDrawing) return;
+            
+            // Add a new line segment to the path
+            state.pathPoints.push(`L${pos.x},${pos.y}`);
+            state.currentPath.setAttribute('d', state.pathPoints.join(' '));
+            
+            // Add particle effect along the path (simplified)
+            if (Math.random() > 0.7) {
+                createParticle(pos.x, pos.y);
+            }
+        }
+
+        function endDrawing() {
+            state.isDrawing = false;
+            state.currentPath = null;
+        }
+
+        function createParticle(x, y) {
+            const particle = document.createElement('div');
+            particle.classList.add('sand-particle');
+            particle.style.left = `${x}px`;
+            particle.style.top = `${y}px`;
+            particle.style.width = `${2 + Math.random() * 3}px`;
+            particle.style.height = particle.style.width;
+            particle.style.opacity = Math.random() * 0.5 + 0.5;
+            particle.style.backgroundColor = 'var(--path-color)';
+            particle.style.position = 'absolute';
+            particle.style.borderRadius = '50%';
+            particle.style.pointerEvents = 'none';
+            particle.style.zIndex = '5';
+            
+            decorationsContainer.appendChild(particle);
+            
+            setTimeout(() => {
+                particle.style.transition = 'all 0.5s ease-out';
+                particle.style.opacity = '0';
+                particle.style.transform = `translate(${(Math.random() - 0.5) * 20}px, ${(Math.random() - 0.5) * 20}px)`;
+                setTimeout(() => particle.remove(), 500);
+            }, 10);
+        }
+
+        // Decoration functionality
+        function addDecoration(type, x, y) {
+            const decoration = document.createElement('div');
+            decoration.classList.add('decoration');
+            
+            if (type === 'stone') {
+                decoration.classList.add('stone');
+                const size = 20 + Math.random() * 30;
+                decoration.style.width = `${size}px`;
+                decoration.style.height = `${size}px`;
+                
+                // Add stone ripple effect
+                createRippleEffect(x, y);
+            } else if (type === 'bamboo') {
+                decoration.classList.add('bamboo');
+                
+                // Add leaves to bamboo
+                for (let i = 0; i < 3; i++) {
+                    const leaf = document.createElement('div');
+                    leaf.classList.add('leaf');
+                    leaf.style.top = `${10 + i * 20}px`;
+                    
+                    // Alternate leaf directions
+                    if (i % 2 === 0) {
+                        leaf.style.left = '25px';
+                        leaf.style.transform = 'rotate(30deg)';
+                    } else {
+                        leaf.style.right = '25px';
+                        leaf.style.transform = 'rotate(-30deg)';
+                    }
+                    
+                    decoration.appendChild(leaf);
+                }
+            }
+            
+            // Position the decoration where clicked
+            decoration.style.left = `${x - decoration.offsetWidth / 2}px`;
+            decoration.style.top = `${y - decoration.offsetHeight / 2}px`;
+            decoration.style.zIndex = state.zIndex++;
+            
+            // Make the decoration draggable
+            makeElementDraggable(decoration);
+            
+            decorationsContainer.appendChild(decoration);
+            state.decorations.push(decoration);
+            
+            return decoration;
+        }
+
+        function makeElementDraggable(element) {
+            let isDragging = false;
+            let offsetX, offsetY;
+            
+            // Mouse events for dragging
+            element.addEventListener('mousedown', startDragging);
+            element.addEventListener('touchstart', handleTouchDragStart);
+            
+            function startDragging(e) {
+                e.stopPropagation(); // Prevent garden interaction
+                isDragging = true;
+                element.classList.add('dragging');
+                
+                const rect = element.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('mouseup', stopDragging);
+            }
+            
+            function handleTouchDragStart(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                isDragging = true;
+                element.classList.add('dragging');
+                
+                const touch = e.touches[0];
+                const rect = element.getBoundingClientRect();
+                offsetX = touch.clientX - rect.left;
+                offsetY = touch.clientY - rect.top;
+                
+                document.addEventListener('touchmove', handleTouchDrag);
+                document.addEventListener('touchend', handleTouchDragEnd);
+            }
+            
+            function drag(e) {
+                if (!isDragging) return;
+                
+                const rect = garden.getBoundingClientRect();
+                const x = e.clientX - rect.left - offsetX;
+                const y = e.clientY - rect.top - offsetY;
+                
+                positionElementWithinBounds(element, x, y);
+            }
+            
+            function handleTouchDrag(e) {
+                if (!isDragging) return;
+                
+                const touch = e.touches[0];
+                const rect = garden.getBoundingClientRect();
+                const x = touch.clientX - rect.left - offsetX;
+                const y = touch.clientY - rect.top - offsetY;
+                
+                positionElementWithinBounds(element, x, y);
+            }
+            
+            function stopDragging() {
+                if (!isDragging) return;
+                isDragging = false;
+                element.classList.remove('dragging');
+                
+                document.removeEventListener('mousemove', drag);
+                document.removeEventListener('mouseup', stopDragging);
+                
+                // Update z-index to bring the element to the front
+                element.style.zIndex = state.zIndex++;
+            }
+            
+            function handleTouchDragEnd() {
+                if (!isDragging) return;
+                isDragging = false;
+                element.classList.remove('dragging');
+                
+                document.removeEventListener('touchmove', handleTouchDrag);
+                document.removeEventListener('touchend', handleTouchDragEnd);
+                
+                // Update z-index to bring the element to the front
+                element.style.zIndex = state.zIndex++;
+            }
+        }
+
+        function positionElementWithinBounds(element, x, y) {
+            const gardenRect = garden.getBoundingClientRect();
+            const elementRect = element.getBoundingClientRect();
+            
+            // Calculate bounds to keep the element within the garden
+            const minX = 0;
+            const minY = 0;
+            const maxX = gardenRect.width - elementRect.width;
+            const maxY = gardenRect.height - elementRect.height;
+            
+            // Apply constraints
+            x = Math.max(minX, Math.min(x, maxX));
+            y = Math.max(minY, Math.min(y, maxY));
+            
+            // Position the element
+            element.style.left = `${x}px`;
+            element.style.top = `${y}px`;
+        }
+
+        function createRippleEffect(x, y) {
+            const ripple = document.createElement('div');
+            ripple.classList.add('stone-ripple');
+            ripple.style.left = `${x}px`;
+            ripple.style.top = `${y}px`;
+            
+            decorationsContainer.appendChild(ripple);
+            
+            // Remove ripple after animation completes
+            setTimeout(() => ripple.remove(), 1000);
+        }
+
+        // Garden management
+        function clearGarden() {
+            // Clear all paths
+            while (sandCanvas.firstChild) {
+                sandCanvas.removeChild(sandCanvas.firstChild);
+            }
+            
+            // Remove all decorations
+            state.decorations.forEach(decoration => {
+                decorationsContainer.removeChild(decoration);
+            });
+            state.decorations = [];
+            
+            // Reset state
+            state.isDrawing = false;
+            state.currentPath = null;
+            state.pathPoints = [];
+            
+            // Add random decorations
+            addRandomDecorations(3);
+        }
+
+        function toggleRakeSize() {
+            state.rakeSize = state.rakeSize === 8 ? 15 : 8;
+            rakeSizeButton.textContent = `Rake Size: ${state.rakeSize === 8 ? 'Small' : 'Large'}`;
+        }
+
+        function addRandomDecorations(count) {
+            const gardenRect = garden.getBoundingClientRect();
+            
+            for (let i = 0; i < count; i++) {
+                const type = Math.random() > 0.5 ? 'stone' : 'bamboo';
+                const x = Math.random() * (gardenRect.width - 50) + 25;
+                const y = Math.random() * (gardenRect.height - 50) + 25;
+                
+                addDecoration(type, x, y);
+            }
+        }
+
+        // Sakura animation
+        function startSakuraAnimation() {
+            setInterval(createSakuraPetal, 3000);
+        }
+
+        function createSakuraPetal() {
+            const gardenRect = garden.getBoundingClientRect();
+            const petal = document.createElement('div');
+            petal.classList.add('sakura-petal');
+            
+            // Random start position at the top
+            const startX = Math.random() * gardenRect.width;
+            petal.style.left = `${startX}px`;
+            petal.style.top = '0px';
+            
+            // Random end position
+            const fallDistanceX = (Math.random() - 0.5) * 300;
+            const fallDistanceY = gardenRect.height + 50;
+            const rotation = Math.random() * 360;
+            const duration = 10 + Math.random() * 15;
+            
+            petal.style.setProperty('--fall-distance-x', fallDistanceX);
+            petal.style.setProperty('--fall-distance-y', fallDistanceY);
+            petal.style.setProperty('--rotation', rotation);
+            petal.style.animationDuration = `${duration}s`;
+            
+            decorationsContainer.appendChild(petal);
+            
+            // Remove petal after animation completes
+            setTimeout(() => petal.remove(), duration * 1000);
+        }
+
+        // Sound functionality
+        function initSounds() {
+            // Create sound objects with Howler.js
+            state.sounds.water = new Howl({
+                src: ['data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMAVEVOQwAAABcAAAB3d3cuc291bmRqYXkuY29tLzIwMDgAVElUMgAAABsAAABXYXRlciBTb3VuZCBFZmZlY3QgTG9vcGVkAFRDT04AAAAPAAAAU291bmQgRWZmZWN0cwA='],
+                html5: true,
+                loop: true,
+                volume: 0
+            });
+            
+            state.sounds.wind = new Howl({
+                src: ['data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMAVEVOQwAAABcAAAB3d3cuc291bmRqYXkuY29tLzIwMDgAVElUMgAAABkAAABXaW5kIFNvdW5kIEVmZmVjdCBMb29wZWQAVENPTgAAAA8AAABTb3VuZCBFZmZlY3RzAA=='],
+                html5: true,
+                loop: true,
+                volume: 0
+            });
+            
+            state.sounds.chimes = new Howl({
+                src: ['data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMAVEVOQwAAABcAAAB3d3cuc291bmRqYXkuY29tLzIwMDgAVElUMgAAABoAAABDaGltZXMgU291bmQgRWZmZWN0IExvb3BlZABUQ09OAAAADwAAAFNvdW5kIEVmZmVjdHMA'],
+                html5: true,
+                loop: true,
+                volume: 0
+            });
+            
+            state.sounds.birds = new Howl({
+                src: ['data:audio/mp3;base64,SUQzAwAAAAAAJlRQRTEAAAAcAAAAU291bmRKYXkuY29tIFNvdW5kIEVmZmVjdHMAVEVOQwAAABcAAAB3d3cuc291bmRqYXkuY29tLzIwMDgAVElUMgAAABkAAABCaXJkcyBTb3VuZCBFZmZlY3QgTG9vcGVkAFRDT04AAAAPAAAAU291bmQgRWZmZWN0cwA='],
+                html5: true,
+                loop: true,
+                volume: 0
+            });
+            
+            // Start playing all sounds (at zero volume initially)
+            Object.values(state.sounds).forEach(sound => sound.play());
+        }
+
+        function updateSoundVolume(name, volume) {
+            if (state.sounds[name]) {
+                state.sounds[name].volume(volume);
+                state.soundVolumes[name] = volume;
+            }
+        }
+
+        // Circular slider functionality
+        function initSliders() {
+            circularSliders.forEach(slider => {
+                const knob = slider.querySelector('.slider-knob');
+                const soundName = slider.dataset.sound;
+                
+                slider.addEventListener('mousedown', startSliderDrag);
+                slider.addEventListener('touchstart', handleSliderTouchStart);
+                
+                function startSliderDrag(e) {
+                    e.preventDefault();
+                    document.addEventListener('mousemove', dragSlider);
+                    document.addEventListener('mouseup', stopSliderDrag);
+                    updateSliderPosition(e);
+                }
+                
+                function handleSliderTouchStart(e) {
+                    e.preventDefault();
+                    document.addEventListener('touchmove', handleSliderTouchMove);
+                    document.addEventListener('touchend', handleSliderTouchEnd);
+                    updateSliderPosition(e.touches[0]);
+                }
+                
+                function dragSlider(e) {
+                    updateSliderPosition(e);
+                }
+                
+                function handleSliderTouchMove(e) {
+                    updateSliderPosition(e.touches[0]);
+                }
+                
+                function updateSliderPosition(e) {
+                    const rect = slider.getBoundingClientRect();
+                    const centerX = rect.left + rect.width / 2;
+                    const centerY = rect.top + rect.height / 2;
+                    
+                    // Calculate angle between center and mouse position
+                    const angle = Math.atan2(e.clientY - centerY, e.clientX - centerX);
+                    
+                    // Convert angle to degrees (0-360)
+                    let degrees = angle * (180 / Math.PI);
+                    degrees = (degrees + 360) % 360;
+                    
+                    // Map degrees to volume (0-1), with 0 volume at the bottom
+                    // 270 degrees (bottom) = 0 volume, 90 degrees (top) = 1 volume
+                    let volume;
+                    if (degrees >= 90 && degrees <= 270) {
+                        // Bottom half: map 90-270 to 1-0
+                        volume = 1 - (degrees - 90) / 180;
+                    } else if (degrees > 270) {
+                        // Bottom right: map 270-360 to 0-0.5
+                        volume = (degrees - 270) / 180;
+                    } else {
+                        // Bottom left: map 0-90 to 0.5-1
+                        volume = 0.5 + degrees / 180;
+                    }
+                    
+                    // Ensure volume is between 0 and 1
+                    volume = Math.max(0, Math.min(1, volume));
+                    
+                    // Update knob position
+                    knob.style.transform = `translate(-50%, -50%) rotate(${degrees}deg) translate(17px, 0)`;
+                    
+                    // Update sound volume
+                    updateSoundVolume(soundName, volume);
+                }
+                
+                function stopSliderDrag() {
+                    document.removeEventListener('mousemove', dragSlider);
+                    document.removeEventListener('mouseup', stopSliderDrag);
+                }
+                
+                function handleSliderTouchEnd() {
+                    document.removeEventListener('touchmove', handleSliderTouchMove);
+                    document.removeEventListener('touchend', handleSliderTouchEnd);
+                }
+            });
+        }
+
+        // Initialize the garden when the page loads
+        window.addEventListener('load', initGarden);
+    </script>
+</body>
+</html>
