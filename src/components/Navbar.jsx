@@ -1,18 +1,30 @@
 // src/components/Navbar.jsx
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import { Link } from 'react-scroll'
-import { HiMenu, HiX } from 'react-icons/hi' // Menu icons
+import { useState } from 'react';
+import { motion } from 'framer-motion';
+// Import Link from react-scroll
+import { Link, animateScroll as scroll } from 'react-scroll'; // Import animateScroll
+import { HiMenu, HiX } from 'react-icons/hi';
+// Make sure this path is correct relative to Navbar.jsx or from your public folder
+import appNestoLogo from '/appnesto_icon.png';
 
 export default function Navbar() {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false);
 
-  // Mobile menu items data
   const menuItems = [
     { to: 'apps', text: 'Apps' },
     { to: 'features', text: 'Features' },
     { to: 'about', text: 'About' },
-  ]
+  ];
+
+  // --- Function to scroll to top ---
+  const scrollToTop = () => {
+    scroll.scrollToTop({
+      duration: 500, // Adjust scroll duration
+      smooth: 'easeInOutQuad', // Adjust easing
+    });
+    // Close mobile menu if open
+    setIsOpen(false);
+  };
 
   return (
     <motion.nav
@@ -22,64 +34,85 @@ export default function Navbar() {
     >
       <div className="max-w-6xl mx-auto px-4 py-4">
         <div className="flex justify-between items-center">
-          {/* Logo */}
-          <motion.div
-            whileHover={{ scale: 1.05 }}
-            className="text-2xl font-bold text-blue-600 cursor-pointer"
-          >
-            AppNesto
-          </motion.div>
 
-          {/* Desktop Menu (Hidden on Mobile) */}
+          {/* === Modified Logo/Brand Link === */}
+          {/* Use a button or div with onClick to trigger scroll to top */}
+          <motion.div
+             whileHover={{ scale: 1.05 }} // Apply hover effect here
+             transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+             onClick={scrollToTop} // Trigger scroll function
+             className="flex items-center gap-2 cursor-pointer" // Added gap-2
+             role="button" // Add role for accessibility
+             aria-label="Scroll to top of page"
+          >
+            {/* Logo Image */}
+            <img
+              src={appNestoLogo}
+              alt="AppNesto Logo"
+              className="h-8 w-auto" // Adjust size as needed (h-8 = 32px)
+            />
+            {/* AppNesto Text */}
+            <span className="text-2xl font-bold text-blue-600">
+              AppNesto
+            </span>
+          </motion.div>
+          {/* === End Modified Logo/Brand Link === */}
+
+
+          {/* Desktop Menu (Hidden on Mobile) *
           <div className="hidden md:flex space-x-8">
             {menuItems.map((item) => (
               <NavLink key={item.to} to={item.to} text={item.text} />
             ))}
           </div>
+          */}
 
-          {/* Mobile Menu Button */}
+          {/* Mobile Menu Button 
           <button
             onClick={() => setIsOpen(!isOpen)}
             className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition-colors"
-            aria-label="Mobile menu"
+            aria-label="Toggle menu" // More descriptive label
           >
             {isOpen ? (
-              <HiX className="w-6 h-6" />
+              <HiX className="w-6 h-6 text-gray-700" /> // Add color
             ) : (
-              <HiMenu className="w-6 h-6" />
+              <HiMenu className="w-6 h-6 text-gray-700" /> // Add color
             )}
           </button>
+          */}
         </div>
 
         {/* Mobile Menu Dropdown */}
-        <div className={`md:hidden mt-4 ${isOpen ? 'block' : 'hidden'}`}>
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="bg-white rounded-lg shadow-lg py-4"
-          >
+        <motion.div // Added motion here for consistency
+          initial={{ height: 0, opacity: 0 }}
+          animate={{ height: isOpen ? 'auto' : 0, opacity: isOpen ? 1 : 0 }}
+          transition={{ duration: 0.3 }}
+          className={`md:hidden overflow-hidden`} // Use overflow-hidden with height animation
+        >
+          {/* Removed extra motion.div wrapper inside */}
+          <div className="bg-white rounded-lg shadow-lg py-2 mt-2"> {/* Adjusted padding/margin */}
             {menuItems.map((item) => (
               <Link
                 key={item.to}
                 to={item.to}
                 spy={true}
                 smooth={true}
-                offset={-70}
+                offset={-70} // Keep offset for section scrolling
                 duration={500}
-                onClick={() => setIsOpen(false)}
-                className="block px-6 py-3 text-gray-600 hover:bg-gray-50 transition-colors"
+                onClick={() => setIsOpen(false)} // Close menu on link click
+                className="block px-6 py-3 text-gray-600 hover:bg-gray-100 transition-colors"
               >
                 {item.text}
               </Link>
             ))}
-          </motion.div>
-        </div>
+          </div>
+        </motion.div>
       </div>
     </motion.nav>
-  )
+  );
 }
 
-// Reusable NavLink component
+// Reusable NavLink component (no changes needed here)
 function NavLink({ to, text }) {
   return (
     <Link
@@ -92,5 +125,5 @@ function NavLink({ to, text }) {
     >
       {text}
     </Link>
-  )
+  );
 }

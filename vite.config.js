@@ -5,10 +5,15 @@ import tailwindcss from '@tailwindcss/vite'
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [react(), tailwindcss(),],
-  base: "/AppNesto/",
+  base: "/",
   build: {
     outDir: 'dist',
     assetsDir: 'assets',
-    copyPublicDir: true // Ensure public dir files are copied
+    rollupOptions: {
+      output: {
+        assetFileNames: 'assets/[name]-[hash][extname]',
+        entryFileNames: 'assets/[name]-[hash].js'
+      }
+    }
   }
 })

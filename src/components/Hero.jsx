@@ -3,18 +3,18 @@ import { TypeAnimation } from 'react-type-animation'
 
 export default function Hero() {
   return (
-    <section className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white py-32">
+    <section className="relative bg-gradient-to-r from-blue-600 to-purple-600 text-white py-8">
       <div className="max-w-6xl mx-auto px-4 text-center">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
         >
           <h1 className="text-4xl md:text-5xl font-bold mb-6 leading-tight">
-            Welcome to 
+            Welcome to Appnesto
             <span className="block mt-4 text-blue-200">
               <TypeAnimation
                 sequence={[
-                  'AppNesto',
+                  'Games',
                   2000,
                   'Productivity Tools',
                   2000,

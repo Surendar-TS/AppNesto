@@ -12,7 +12,7 @@ export default function App() {
       <main className="pt-20"> {/* Spacing for fixed navbar */}
         <Hero />
         <AppsGrid />
-        <FeaturesSection />
+        {/* <FeaturesSection /> */}
       </main>
       <Footer />
     </div>
